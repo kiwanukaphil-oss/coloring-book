@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple cat outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Cat body (sitting position) -->
+    <path d="M300,580
+             C280,520 270,460 280,400
+             C290,340 310,300 340,280
+             C370,260 400,250 430,260
+             C460,270 490,300 510,340
+             C530,380 540,440 530,500
+             C520,560 510,580 500,600"
+          stroke-width="4"/>
+
+    <!-- Head -->
+    <ellipse cx="400" cy="250" rx="85" ry="75" stroke-width="4"/>
+
+    <!-- Left ear -->
+    <path d="M330,200 L305,130 L350,180" stroke-width="4"/>
+    <!-- Left inner ear -->
+    <path d="M330,190 L315,145 L345,182" stroke-width="3"/>
+
+    <!-- Right ear -->
+    <path d="M470,200 L495,130 L450,180" stroke-width="4"/>
+    <!-- Right inner ear -->
+    <path d="M470,190 L485,145 L455,182" stroke-width="3"/>
+
+    <!-- Left eye -->
+    <ellipse cx="370" cy="245" rx="18" ry="20" stroke-width="3.5"/>
+    <!-- Left pupil -->
+    <ellipse cx="370" cy="248" rx="8" ry="12" stroke-width="3"/>
+
+    <!-- Right eye -->
+    <ellipse cx="430" cy="245" rx="18" ry="20" stroke-width="3.5"/>
+    <!-- Right pupil -->
+    <ellipse cx="430" cy="248" rx="8" ry="12" stroke-width="3"/>
+
+    <!-- Nose -->
+    <path d="M395,270 L400,278 L405,270 Z" stroke-width="3" fill="none"/>
+
+    <!-- Mouth -->
+    <path d="M400,278 L400,288" stroke-width="3"/>
+    <path d="M400,288 C390,298 380,300 375,295" stroke-width="3"/>
+    <path d="M400,288 C410,298 420,300 425,295" stroke-width="3"/>
+
+    <!-- Left whiskers -->
+    <line x1="350" y1="272" x2="270" y2="260" stroke-width="3"/>
+    <line x1="350" y1="280" x2="265" y2="280" stroke-width="3"/>
+    <line x1="350" y1="288" x2="270" y2="300" stroke-width="3"/>
+
+    <!-- Right whiskers -->
+    <line x1="450" y1="272" x2="530" y2="260" stroke-width="3"/>
+    <line x1="450" y1="280" x2="535" y2="280" stroke-width="3"/>
+    <line x1="450" y1="288" x2="530" y2="300" stroke-width="3"/>
+
+    <!-- Front left leg -->
+    <path d="M330,500 L320,620 C320,635 335,640 345,635 L355,630" stroke-width="4"/>
+    <!-- Front left paw toes -->
+    <path d="M325,630 C328,638 338,640 342,635" stroke-width="3"/>
+
+    <!-- Front right leg -->
+    <path d="M470,500 L480,620 C480,635 465,640 455,635 L445,630" stroke-width="4"/>
+    <!-- Front right paw toes -->
+    <path d="M475,630 C472,638 462,640 458,635" stroke-width="3"/>
+
+    <!-- Bottom / sitting area -->
+    <path d="M300,580 C300,630 340,660 400,660 C460,660 500,630 500,580" stroke-width="4"/>
+
+    <!-- Tail -->
+    <path d="M500,590
+             C540,580 570,550 580,510
+             C590,470 580,440 560,430
+             C540,420 520,430 525,450"
+          stroke-width="4"/>
+
+    <!-- Chest fluff lines -->
+    <path d="M370,320 C380,340 390,340 400,330" stroke-width="3"/>
+    <path d="M400,330 C410,340 420,340 430,320" stroke-width="3"/>
+
+    <!-- Belly line -->
+    <path d="M360,450 C380,470 420,470 440,450" stroke-width="3"/>
+
+  </g>
+</svg>

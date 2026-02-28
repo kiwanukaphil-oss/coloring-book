@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <!-- Background circle -->
+  <circle cx="96" cy="96" r="90" fill="#FFF9C4" stroke="#FF8F00" stroke-width="4"/>
+
+  <!-- Paint palette body -->
+  <ellipse cx="96" cy="100" rx="68" ry="58" fill="#FFECB3" stroke="#5D4037" stroke-width="3"/>
+
+  <!-- Thumb hole -->
+  <ellipse cx="60" cy="110" rx="16" ry="14" fill="#FFF9C4" stroke="#5D4037" stroke-width="2.5"/>
+
+  <!-- Color dots on the palette -->
+  <circle cx="100" cy="65" r="12" fill="#F44336"/>  <!-- Red -->
+  <circle cx="130" cy="78" r="11" fill="#2196F3"/>  <!-- Blue -->
+  <circle cx="140" cy="108" r="11" fill="#4CAF50"/>  <!-- Green -->
+  <circle cx="128" cy="135" r="10" fill="#FF9800"/>  <!-- Orange -->
+  <circle cx="100" cy="145" r="10" fill="#9C27B0"/>  <!-- Purple -->
+  <circle cx="78" cy="72" r="11" fill="#FFEB3B"/>   <!-- Yellow -->
+
+  <!-- Paintbrush handle -->
+  <rect x="135" y="30" width="12" height="50" rx="3" ry="3" fill="#8D6E63" stroke="#5D4037" stroke-width="2" transform="rotate(30, 141, 55)"/>
+
+  <!-- Paintbrush ferrule (metal band) -->
+  <rect x="135" y="72" width="12" height="10" rx="1" ry="1" fill="#B0BEC5" stroke="#78909C" stroke-width="1.5" transform="rotate(30, 141, 77)"/>
+
+  <!-- Paintbrush bristles -->
+  <path d="M130,90 Q138,82 146,90 Q148,100 138,105 Q128,100 130,90Z" fill="#FF7043" stroke="#E64A19" stroke-width="1.5" transform="rotate(30, 138, 95)"/>
+</svg>

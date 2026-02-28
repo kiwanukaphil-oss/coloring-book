@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF6F00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/styles.css">
+    <title>My Coloring Book</title>
+</head>
+<body>
+    <!-- Image gallery modal -->
+    <div id="image-gallery-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 class="modal-title">Pick a Picture!</h2>
+            <div id="gallery-grid" class="gallery-grid"></div>
+            <label class="upload-button" id="upload-button-label">
+                Upload Your Own
+                <input type="file" id="upload-input" accept="image/*" hidden>
+            </label>
+            <label class="upload-button upload-button-reference" id="reference-upload-button-label">
+                Upload Reference Image
+                <input type="file" id="reference-upload-input" accept="image/*" hidden>
+            </label>
+            <button id="gallery-close-button" class="gallery-close-button">Close</button>
+        </div>
+    </div>
+
+    <!-- Clear confirmation modal -->
+    <div id="clear-confirm-modal" class="modal hidden">
+        <div class="modal-content modal-content-small">
+            <p class="confirm-text">Erase all your coloring?</p>
+            <div class="confirm-buttons">
+                <button id="clear-confirm-yes" class="confirm-button confirm-yes">Yes</button>
+                <button id="clear-confirm-no" class="confirm-button confirm-no">No</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main app layout -->
+    <div id="app-container">
+        <!-- Canvas area -->
+        <div id="canvas-container">
+            <canvas id="coloring-canvas"></canvas>
+            <canvas id="reference-canvas"></canvas>
+            <canvas id="outline-canvas"></canvas>
+            <canvas id="interaction-canvas"></canvas>
+        </div>
+
+        <!-- Color palette (right side) -->
+        <div id="color-palette"></div>
+    </div>
+
+    <!-- Toolbar (bottom) -->
+    <div id="toolbar">
+        <button id="tool-fill" class="tool-button active" title="Fill">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg>
+            <span class="tool-label">Fill</span>
+        </button>
+        <button id="tool-brush" class="tool-button" title="Brush">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/></svg>
+            <span class="tool-label">Brush</span>
+        </button>
+        <div id="brush-size-control" class="brush-size-control hidden">
+            <input type="range" id="brush-size-slider" min="4" max="40" value="12" class="brush-size-slider">
+            <span id="brush-size-value" class="brush-size-value">12</span>
+        </div>
+        <button id="tool-undo" class="tool-button" title="Undo">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+            <span class="tool-label">Undo</span>
+        </button>
+        <button id="tool-clear" class="tool-button" title="Clear">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="tool-label">Clear</span>
+        </button>
+        <button id="tool-save" class="tool-button" title="Save">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <span class="tool-label">Save</span>
+        </button>
+        <button id="tool-gallery" class="tool-button" title="Gallery">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/></svg>
+            <span class="tool-label">Gallery</span>
+        </button>
+        <div id="active-color-indicator" class="active-color-indicator" style="background-color: #FF0000;"></div>
+    </div>
+
+    <script src="js/touch-guard.js"></script>
+    <script src="js/canvas-manager.js"></script>
+    <script src="js/undo-manager.js"></script>
+    <script src="js/color-palette.js"></script>
+    <script src="js/flood-fill.js"></script>
+    <script src="js/brush-engine.js"></script>
+    <script src="js/image-loader.js"></script>
+    <script src="js/toolbar.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

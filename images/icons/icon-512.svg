@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="245" fill="#FFF9C4" stroke="#FF8F00" stroke-width="8"/>
+
+  <!-- Paint palette body -->
+  <ellipse cx="256" cy="268" rx="182" ry="155" fill="#FFECB3" stroke="#5D4037" stroke-width="6"/>
+
+  <!-- Thumb hole -->
+  <ellipse cx="160" cy="295" rx="42" ry="38" fill="#FFF9C4" stroke="#5D4037" stroke-width="5"/>
+
+  <!-- Color dots on the palette -->
+  <circle cx="268" cy="168" r="30" fill="#F44336"/>  <!-- Red -->
+  <circle cx="348" cy="205" r="28" fill="#2196F3"/>  <!-- Blue -->
+  <circle cx="375" cy="288" r="28" fill="#4CAF50"/>  <!-- Green -->
+  <circle cx="342" cy="365" r="26" fill="#FF9800"/>  <!-- Orange -->
+  <circle cx="268" cy="390" r="26" fill="#9C27B0"/>  <!-- Purple -->
+  <circle cx="208" cy="188" r="28" fill="#FFEB3B"/>  <!-- Yellow -->
+  <circle cx="205" cy="378" r="24" fill="#E91E63"/>  <!-- Pink -->
+
+  <!-- Paintbrush handle -->
+  <rect x="360" y="68" width="28" height="135" rx="6" ry="6" fill="#8D6E63" stroke="#5D4037" stroke-width="4" transform="rotate(30, 374, 135)"/>
+
+  <!-- Paintbrush ferrule (metal band) -->
+  <rect x="360" y="188" width="28" height="22" rx="2" ry="2" fill="#B0BEC5" stroke="#78909C" stroke-width="3" transform="rotate(30, 374, 199)"/>
+
+  <!-- Paintbrush bristles -->
+  <path d="M345,235 Q365,215 385,235 Q390,265 368,280 Q345,265 345,235Z" fill="#FF7043" stroke="#E64A19" stroke-width="3" transform="rotate(30, 368, 255)"/>
+
+  <!-- Small sparkle accents for kid-friendly feel -->
+  <g fill="#FFD54F" opacity="0.8">
+    <polygon points="80,80 85,68 90,80 102,85 90,90 85,102 80,90 68,85" />
+    <polygon points="430,120 434,110 438,120 448,124 438,128 434,138 430,128 420,124" />
+    <polygon points="450,400 454,390 458,400 468,404 458,408 454,418 450,408 440,404" />
+  </g>
+</svg>
