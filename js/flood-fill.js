@@ -36,9 +36,6 @@ const FloodFill = (() => {
             return;
         }
 
-        // Save undo snapshot before filling
-        UndoManager.saveSnapshot();
-
         // Read pixel data from both canvases at native resolution
         coloringCtx.save();
         coloringCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -76,12 +73,20 @@ const FloodFill = (() => {
             return;
         }
 
-        scanlineFill(
+        const filledPixelCount = scanlineFill(
             coloringPixels, outlinePixels, width, height,
             startX, startY,
             targetR, targetG, targetB, targetA,
             fillColor
         );
+
+        if (filledPixelCount === 0) {
+            return;
+        }
+
+        // Save undo snapshot only when at least one pixel changed.
+        // Canvas content is still unchanged at this point.
+        UndoManager.saveSnapshot();
 
         // Write the modified pixel data back to the canvas
         coloringCtx.save();
@@ -101,6 +106,7 @@ const FloodFill = (() => {
     ) {
         const visited = new Uint8Array(width * height);
         const stack = [[startX, startY]];
+        let filledCount = 0;
 
         while (stack.length > 0) {
             const [x, y] = stack.pop();
@@ -140,6 +146,7 @@ const FloodFill = (() => {
                 pixels[pixelIndex + 1] = fillColor.g;
                 pixels[pixelIndex + 2] = fillColor.b;
                 pixels[pixelIndex + 3] = 255;
+                filledCount++;
 
                 // Check left neighbor
                 if (x > 0) {
@@ -178,6 +185,8 @@ const FloodFill = (() => {
                 currentY++;
             }
         }
+
+        return filledCount;
     }
 
     // Checks if a pixel's color is close enough to the target

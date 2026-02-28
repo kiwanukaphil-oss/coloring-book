@@ -260,28 +260,40 @@ const CanvasManager = (() => {
     }
 
     function handleWindowResize() {
-        // Store current canvas content before resizing
-        const coloringData = coloringCtx.getImageData(0, 0, coloringCanvas.width, coloringCanvas.height);
-        const referenceData = referenceCtx.getImageData(0, 0, referenceCanvas.width, referenceCanvas.height);
-        const outlineData = outlineCtx.getImageData(0, 0, outlineCanvas.width, outlineCanvas.height);
+        // Snapshot layers before resizing so they can be
+        // re-rendered proportionally at the new resolution.
+        const coloringSnapshot = captureCanvasSnapshot(coloringCanvas);
+        const referenceSnapshot = captureCanvasSnapshot(referenceCanvas);
+        const outlineSnapshot = captureCanvasSnapshot(outlineCanvas);
 
         resizeCanvasesToFitContainer();
 
-        // Restore content after resize
-        coloringCtx.save();
-        coloringCtx.setTransform(1, 0, 0, 1, 0, 0);
-        coloringCtx.putImageData(coloringData, 0, 0);
-        coloringCtx.restore();
+        restoreScaledSnapshot(coloringCtx, coloringCanvas, coloringSnapshot);
+        restoreScaledSnapshot(referenceCtx, referenceCanvas, referenceSnapshot);
+        restoreScaledSnapshot(outlineCtx, outlineCanvas, outlineSnapshot);
+    }
 
-        referenceCtx.save();
-        referenceCtx.setTransform(1, 0, 0, 1, 0, 0);
-        referenceCtx.putImageData(referenceData, 0, 0);
-        referenceCtx.restore();
+    function captureCanvasSnapshot(sourceCanvas) {
+        const snapshot = document.createElement('canvas');
+        snapshot.width = sourceCanvas.width;
+        snapshot.height = sourceCanvas.height;
 
-        outlineCtx.save();
-        outlineCtx.setTransform(1, 0, 0, 1, 0, 0);
-        outlineCtx.putImageData(outlineData, 0, 0);
-        outlineCtx.restore();
+        const snapshotCtx = snapshot.getContext('2d');
+        snapshotCtx.drawImage(sourceCanvas, 0, 0);
+
+        return snapshot;
+    }
+
+    function restoreScaledSnapshot(targetCtx, targetCanvas, snapshotCanvas) {
+        targetCtx.save();
+        targetCtx.setTransform(1, 0, 0, 1, 0, 0);
+        targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+        targetCtx.drawImage(
+            snapshotCanvas,
+            0, 0, snapshotCanvas.width, snapshotCanvas.height,
+            0, 0, targetCanvas.width, targetCanvas.height
+        );
+        targetCtx.restore();
     }
 
     // Returns the pixel-ratio-aware scale factor used by the canvas,
