@@ -1,11 +1,13 @@
 /* ========================================
    Service Worker
-   Cache-first strategy for offline support.
-   Caches all app assets during install and
-   serves them from cache on subsequent loads.
+   Hybrid strategy for offline support:
+   - Network-first for HTML/navigation
+   - Stale-while-revalidate for static assets
+   Improves update freshness while retaining
+   strong offline behavior.
    ======================================== */
 
-const CACHE_VERSION = 'coloring-book-v3';
+const CACHE_VERSION = 'coloring-book-v4';
 
 const ASSETS_TO_CACHE = [
     './',
@@ -52,15 +54,79 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Serves cached assets first for speed, falling back to
-// network for any assets not yet in the cache (e.g. uploaded images)
-self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                return cachedResponse;
-            }
-            return fetch(event.request);
+function isNavigationRequest(request) {
+    return request.mode === 'navigate';
+}
+
+function isStaticAssetRequest(request) {
+    if (request.method !== 'GET') return false;
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return false;
+
+    return (
+        url.pathname.endsWith('.css') ||
+        url.pathname.endsWith('.js') ||
+        url.pathname.endsWith('.svg') ||
+        url.pathname.endsWith('.png') ||
+        url.pathname.endsWith('.jpg') ||
+        url.pathname.endsWith('.jpeg') ||
+        url.pathname.endsWith('.webp') ||
+        url.pathname.endsWith('.json') ||
+        url.pathname.startsWith('/images/') ||
+        url.pathname.startsWith('/css/') ||
+        url.pathname.startsWith('/js/')
+    );
+}
+
+function cacheResponse(request, response) {
+    if (!response || !response.ok) return Promise.resolve();
+    return caches.open(CACHE_VERSION).then((cache) => cache.put(request, response.clone()));
+}
+
+function networkFirst(request) {
+    return fetch(request)
+        .then((networkResponse) => {
+            cacheResponse(request, networkResponse);
+            return networkResponse;
         })
+        .catch(() => {
+            return caches.match(request).then((cachedResponse) => {
+                if (cachedResponse) return cachedResponse;
+                return caches.match('./index.html');
+            });
+        });
+}
+
+function staleWhileRevalidate(request) {
+    return caches.match(request).then((cachedResponse) => {
+        const networkPromise = fetch(request)
+            .then((networkResponse) => {
+                cacheResponse(request, networkResponse);
+                return networkResponse;
+            })
+            .catch(() => null);
+
+        return cachedResponse || networkPromise;
+    });
+}
+
+// Uses hybrid caching to balance freshness and responsiveness.
+self.addEventListener('fetch', (event) => {
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
+    if (isNavigationRequest(event.request)) {
+        event.respondWith(networkFirst(event.request));
+        return;
+    }
+
+    if (isStaticAssetRequest(event.request)) {
+        event.respondWith(staleWhileRevalidate(event.request));
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request).catch(() => caches.match(event.request))
     );
 });

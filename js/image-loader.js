@@ -40,6 +40,10 @@ const ImageLoader = (() => {
         referencePanelClose = document.getElementById('reference-panel-close');
         referencePanelResize = document.getElementById('reference-panel-resize');
         referencePreviewImage = document.getElementById('reference-preview-image');
+        referencePreviewImage.classList.add('is-empty');
+        referencePreviewImage.addEventListener('error', () => {
+            clearReferencePreviewImage();
+        });
 
         buildGalleryThumbnails();
         setupUploadHandler();
@@ -223,7 +227,7 @@ const ImageLoader = (() => {
     }
 
     function showReferencePanel(imageSrc) {
-        referencePreviewImage.src = imageSrc;
+        setReferencePreviewImage(imageSrc);
         referencePanel.style.left = '12px';
         referencePanel.style.top = '12px';
         referencePanel.style.width = '';
@@ -236,7 +240,17 @@ const ImageLoader = (() => {
 
     function hideReferencePanel() {
         referencePanel.classList.add('hidden');
-        referencePreviewImage.src = '';
+        clearReferencePreviewImage();
+    }
+
+    function setReferencePreviewImage(imageSrc) {
+        referencePreviewImage.classList.remove('is-empty');
+        referencePreviewImage.src = imageSrc;
+    }
+
+    function clearReferencePreviewImage() {
+        referencePreviewImage.removeAttribute('src');
+        referencePreviewImage.classList.add('is-empty');
     }
 
     function setupCloseHandler() {

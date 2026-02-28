@@ -118,6 +118,10 @@ html, body {
     background-color: #f5f5f5;
 }
 
+.reference-preview-image.is-empty {
+    display: none;
+}
+
 .reference-panel-resize {
     position: absolute;
     right: 0;
