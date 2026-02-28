@@ -5,7 +5,7 @@
    serves them from cache on subsequent loads.
    ======================================== */
 
-const CACHE_VERSION = 'coloring-book-v2';
+const CACHE_VERSION = 'coloring-book-v3';
 
 const ASSETS_TO_CACHE = [
     './',

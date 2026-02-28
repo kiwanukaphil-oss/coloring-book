@@ -62,6 +62,75 @@ html, body {
     touch-action: none;
 }
 
+.reference-panel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: min(220px, 38vw);
+    height: 200px;
+    min-width: 140px;
+    min-height: 120px;
+    max-width: calc(100% - 24px);
+    background-color: #ffffff;
+    border: 2px solid #1E88E5;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+    z-index: 5;
+    overflow: hidden;
+    touch-action: none;
+}
+
+.reference-panel-handle {
+    height: 34px;
+    background-color: #1E88E5;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: grab;
+}
+
+.reference-panel-handle:active {
+    cursor: grabbing;
+}
+
+.reference-panel-close {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background-color: #1565C0;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.reference-preview-image {
+    display: block;
+    width: 100%;
+    height: calc(100% - 34px);
+    object-fit: contain;
+    background-color: #f5f5f5;
+}
+
+.reference-panel-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    background:
+        linear-gradient(135deg, transparent 52%, #1E88E5 52%),
+        linear-gradient(135deg, transparent 68%, #90CAF9 68%);
+    touch-action: none;
+}
+
 /* --- Color Palette (right side panel) --- */
 #color-palette {
     width: 60px;

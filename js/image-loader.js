@@ -14,14 +14,37 @@ const ImageLoader = (() => {
 
     let galleryModal = null;
     let galleryGrid = null;
+    let referencePanel = null;
+    let referencePanelHandle = null;
+    let referencePanelClose = null;
+    let referencePanelResize = null;
+    let referencePreviewImage = null;
+    let isDraggingReferencePanel = false;
+    let isResizingReferencePanel = false;
+    let dragPointerId = null;
+    let resizePointerId = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+    let resizeStartClientX = 0;
+    let resizeStartClientY = 0;
+    const REFERENCE_PANEL_MIN_WIDTH = 140;
+    const REFERENCE_PANEL_MIN_HEIGHT = 120;
 
     function initialize() {
         galleryModal = document.getElementById('image-gallery-modal');
         galleryGrid = document.getElementById('gallery-grid');
+        referencePanel = document.getElementById('reference-panel');
+        referencePanelHandle = document.getElementById('reference-panel-handle');
+        referencePanelClose = document.getElementById('reference-panel-close');
+        referencePanelResize = document.getElementById('reference-panel-resize');
+        referencePreviewImage = document.getElementById('reference-preview-image');
 
         buildGalleryThumbnails();
         setupUploadHandler();
         setupReferenceUploadHandler();
+        setupReferencePanelInteractions();
         setupCloseHandler();
     }
 
@@ -86,19 +109,134 @@ const ImageLoader = (() => {
 
             const reader = new FileReader();
             reader.onload = (loadEvent) => {
-                CanvasManager.loadReferenceImage(loadEvent.target.result)
-                    .then(() => {
-                        hideGallery();
-                    })
-                    .catch((error) => {
-                        console.error('Failed to load reference image:', error);
-                    });
+                showReferencePanel(loadEvent.target.result);
+                hideGallery();
             };
             reader.readAsDataURL(file);
 
             // Reset input so the same file can be re-selected
             referenceUploadInput.value = '';
         });
+    }
+
+    function setupReferencePanelInteractions() {
+        referencePanelHandle.addEventListener('pointerdown', handleReferencePanelPointerDown);
+        referencePanelResize.addEventListener('pointerdown', handleReferencePanelResizePointerDown);
+        window.addEventListener('pointermove', handleReferencePanelPointerMove);
+        window.addEventListener('pointerup', handleReferencePanelPointerUp);
+        window.addEventListener('pointercancel', handleReferencePanelPointerUp);
+
+        referencePanelClose.addEventListener('pointerdown', (event) => {
+            event.stopPropagation();
+            hideReferencePanel();
+        });
+    }
+
+    function handleReferencePanelPointerDown(event) {
+        if (referencePanel.classList.contains('hidden') || isResizingReferencePanel) return;
+
+        isDraggingReferencePanel = true;
+        dragPointerId = event.pointerId;
+
+        const panelRect = referencePanel.getBoundingClientRect();
+        dragOffsetX = event.clientX - panelRect.left;
+        dragOffsetY = event.clientY - panelRect.top;
+
+        referencePanelHandle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    }
+
+    function handleReferencePanelResizePointerDown(event) {
+        if (referencePanel.classList.contains('hidden')) return;
+
+        isResizingReferencePanel = true;
+        resizePointerId = event.pointerId;
+        isDraggingReferencePanel = false;
+        dragPointerId = null;
+
+        resizeStartWidth = referencePanel.offsetWidth;
+        resizeStartHeight = referencePanel.offsetHeight;
+        resizeStartClientX = event.clientX;
+        resizeStartClientY = event.clientY;
+
+        referencePanelResize.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    function handleReferencePanelPointerMove(event) {
+        if (isResizingReferencePanel && event.pointerId === resizePointerId) {
+            const container = CanvasManager.getContainerElement();
+            const containerRect = container.getBoundingClientRect();
+            const panelLeft = referencePanel.offsetLeft;
+            const panelTop = referencePanel.offsetTop;
+            const maxWidth = containerRect.width - panelLeft;
+            const maxHeight = containerRect.height - panelTop;
+
+            const deltaX = event.clientX - resizeStartClientX;
+            const deltaY = event.clientY - resizeStartClientY;
+
+            const nextWidth = Math.max(
+                REFERENCE_PANEL_MIN_WIDTH,
+                Math.min(resizeStartWidth + deltaX, maxWidth)
+            );
+            const nextHeight = Math.max(
+                REFERENCE_PANEL_MIN_HEIGHT,
+                Math.min(resizeStartHeight + deltaY, maxHeight)
+            );
+
+            referencePanel.style.width = nextWidth + 'px';
+            referencePanel.style.height = nextHeight + 'px';
+            return;
+        }
+
+        if (!isDraggingReferencePanel || event.pointerId !== dragPointerId) return;
+
+        const container = CanvasManager.getContainerElement();
+        const containerRect = container.getBoundingClientRect();
+        const panelWidth = referencePanel.offsetWidth;
+        const panelHeight = referencePanel.offsetHeight;
+
+        const rawLeft = event.clientX - containerRect.left - dragOffsetX;
+        const rawTop = event.clientY - containerRect.top - dragOffsetY;
+
+        const clampedLeft = Math.max(0, Math.min(rawLeft, containerRect.width - panelWidth));
+        const clampedTop = Math.max(0, Math.min(rawTop, containerRect.height - panelHeight));
+
+        referencePanel.style.left = clampedLeft + 'px';
+        referencePanel.style.top = clampedTop + 'px';
+    }
+
+    function handleReferencePanelPointerUp(event) {
+        if (isResizingReferencePanel && event.pointerId === resizePointerId) {
+            referencePanelResize.releasePointerCapture?.(event.pointerId);
+            isResizingReferencePanel = false;
+            resizePointerId = null;
+            return;
+        }
+
+        if (isDraggingReferencePanel && event.pointerId === dragPointerId) {
+            referencePanelHandle.releasePointerCapture?.(event.pointerId);
+            isDraggingReferencePanel = false;
+            dragPointerId = null;
+        }
+    }
+
+    function showReferencePanel(imageSrc) {
+        referencePreviewImage.src = imageSrc;
+        referencePanel.style.left = '12px';
+        referencePanel.style.top = '12px';
+        referencePanel.style.width = '';
+        referencePanel.style.height = '';
+        referencePanel.classList.remove('hidden');
+
+        // Ensure the old in-canvas reference layer is not visible.
+        CanvasManager.clearReferenceCanvas();
+    }
+
+    function hideReferencePanel() {
+        referencePanel.classList.add('hidden');
+        referencePreviewImage.src = '';
     }
 
     function setupCloseHandler() {
@@ -120,6 +258,7 @@ const ImageLoader = (() => {
         hideGallery();
         UndoManager.clearHistory();
         CanvasManager.clearReferenceCanvas();
+        hideReferencePanel();
 
         CanvasManager.loadOutlineImage(imageSrc)
             .then(() => {
