@@ -1,69 +1,57 @@
 # Review Brief
 
 ## Session date
-2026-02-28
+2026-03-01
 
 ## Summary
-Completed all 7 phases of the Codebase Alignment Guide — from initial comprehension audit through to ongoing discipline. The codebase is now fully aligned with canonical patterns documented in 7 ADRs, covered by 51 automated tests, and ready for disciplined ongoing development.
+Completed Phase 0 (Stability) and Phase 1 (Edge-Aware Brush). The brush engine now respects outline boundaries — paint stays "inside the lines." Backed by a precomputed binary outline mask for O(1) pixel lookups and 3 new tests.
 
 ## What was changed
 
-### Phase 1: Comprehension Audit
-- Created `ARCHITECTURE.md` — complete codebase map
+### Phase 0.1: Touch Guard Scoping
+- `js/touch-guard.js` — All 5 event listeners scoped from `document` to `#canvas-container`. Gallery modal scrolling and text selection now work on touch devices.
 
-### Phase 2: Pattern Inventory
-- Created `PATTERN_INVENTORY.md` — 7 inconsistencies identified across 7 categories
+### Phase 0.2: E2E Test Stabilization
+- Verified all 51 tests pass. No code changes needed.
 
-### Phase 3: Architecture Decision Records
-- Created `docs/decisions/ADR-001` through `ADR-007` (error handling, coordinate conversion, visibility toggling, boolean naming, event handler style, folder casing, canvas context reset)
+### Phase 0.3: QA Checklist
+- Created `Docs/qa-checklist.md` — 85 manual test cases across 13 categories (app launch, canvas, brush, fill, palette, undo, clear, save, reference panel, touch guards, PWA, performance, edge cases) with device testing matrix.
 
-### Phase 4: Consolidation
-- `js/canvas-manager.js` — Added `withNativeTransform()` and `getCanvasPixelCoords()` shared utilities; refactored 8 internal save/setTransform/restore blocks
-- `js/flood-fill.js` — Removed internal coord conversion; accepts canvas pixel coords directly; 4 save/setTransform/restore → withNativeTransform; renamed booleans
-- `js/brush-engine.js` — Removed private `getCanvasCoords()`; uses shared utilities; 2 save/setTransform/restore → withNativeTransform
-- `js/undo-manager.js` — 1 save/setTransform/restore → withNativeTransform
-- `js/toolbar.js` — Uses `getCanvasPixelCoords()`; renamed `fillPointerDown` → `isFillPointerDown`
-- `js/image-loader.js` — `style.display='none'` → `classList.add('hidden')`; `console.error` → `console.warn`
-- `js/app.js` — Removed `console.log` success logging
-- Git tracking: `Docs/` → `docs/` (lowercase)
-- Created `CONSOLIDATION_LOG.md` — audit trail
+### Phase 1: Edge-Aware Brush (ADR-008)
+- `docs/decisions/ADR-008-outline-mask-brush-clipping.md` — New ADR defining the precomputed outline mask pattern and post-draw pixel restoration approach.
+- `js/canvas-manager.js` — Added `outlineMask` state, `computeOutlineMask()` function (runs after `makeWhitePixelsTransparent()` on template load), `getOutlineMask()` public getter. Mask is cleared on `clearAllCanvases()` and recomputed on `handleWindowResize()`.
+- `js/brush-engine.js` — Added `restoreOutlinePixels(ctx, x, y, w, h)` that reads a small bounding box from the coloring canvas and resets any outline-mask pixels to white. Called after the initial dot in `handlePointerDown` and after all coalesced segments in `handlePointerMove`.
+- `tests/characterisation/canvas-manager.spec.js` — 2 new tests: mask is null before page load, mask is populated after page load.
+- `tests/characterisation/brush-engine.spec.js` — 1 new test: brush stroke across outline verifies zero outline pixels are painted over.
 
-### Phase 5: Naming and Documentation
-- All 10 module files — replaced old-style `/* === ... === */` headers with prescribed `/** ... */` format including Responsible for / NOT responsible for / Key functions / Dependencies / Notes
-- Added inline comments to 9 functions >10 lines that lacked them
-- Aligned `filledCount` → `filledPixelCount` in flood-fill.js
-
-### Phase 6: Characterisation Tests
-- Created 7 test files in `tests/characterisation/` (47 tests total)
-- Created `TEST_COVERAGE.md` — coverage map with gaps and recommendations
-- Fixed CSS bug: added missing `.reference-panel.hidden` and `.gallery-item.hidden` rules
-
-### Test Infrastructure Fixes
-- `scripts/static-server.js` — Added `Access-Control-Allow-Origin: *` header
-- `tests/smoke.spec.js` — Fixed `window.CanvasManager` → `CanvasManager` (const declarations don't create window properties); all 4 pre-existing tests now pass
-
-### Phase 7: Ongoing Discipline
-- Updated `CLAUDE.md` — embedded Phase 7 discipline rules, listed all completed phases, added ADR summary
-- Updated `ARCHITECTURE.md` — reflected all changes from Phases 4-6, updated known issues, updated test suite section
+### Documentation Updates
+- `ARCHITECTURE.md` — Updated test counts (51→54), ADR count (7→8), CanvasManager module description, resolved Known Issue #1 (touch guards).
 
 ## ADRs applied
-- ADR-001: Error handling (`console.error` → `console.warn`, removed success logging)
-- ADR-002: Coordinate conversion (3 private implementations → 1 shared `getCanvasPixelCoords`)
-- ADR-003: Visibility toggling (`style.display` → `classList.add/remove('hidden')`)
-- ADR-004: Boolean naming (`fillPointerDown` → `isFillPointerDown`, `scanLeft` → `isScanningLeft`, `scanRight` → `isScanningRight`)
-- ADR-005: Event handler style (verified — already compliant)
-- ADR-006: Folder casing (`Docs/` → `docs/` in git tracking)
-- ADR-007: Canvas context reset (15 raw save/setTransform/restore blocks → `withNativeTransform()`)
+- ADR-007: Canvas context reset (`withNativeTransform` for all canvas pixel operations)
+- ADR-008: Outline mask brush clipping (new — precomputed mask + post-draw restoration)
 
 ## New decisions made (not yet in an ADR)
-None. All patterns are covered by existing ADRs.
+None. ADR-008 was written before implementation per ongoing discipline rules.
 
 ## Bugs found and fixed
-1. **`window.CanvasManager` always undefined in tests** — `const` at script top level creates global lexical bindings, not `window` properties. All 8 occurrences in smoke tests silently returned `undefined` via optional chaining, causing 2 tests to timeout. Fixed by removing `window.` prefix.
-2. **Missing CSS rules for `.hidden` class** — `.reference-panel.hidden` and `.gallery-item.hidden` had no CSS rules, so `classList.add('hidden')` had no visual effect. The reference panel was silently sitting at z-index 5 over the canvas corner. Fixed by adding both CSS rules.
+None.
 
 ## Test results
-51/51 passing (4.5s) — 4 smoke tests + 47 characterisation tests
+54/54 passing (4.8s) — 4 smoke tests + 50 characterisation tests
+
+## Files modified
+| File | Change |
+|------|--------|
+| `js/canvas-manager.js` | +outlineMask, +computeOutlineMask(), +getOutlineMask(), mask lifecycle |
+| `js/brush-engine.js` | +restoreOutlinePixels(), called in handlePointerDown + handlePointerMove |
+| `js/touch-guard.js` | Scoped all listeners to #canvas-container |
+| `docs/decisions/ADR-008-outline-mask-brush-clipping.md` | New ADR |
+| `Docs/qa-checklist.md` | New QA checklist (85 test cases) |
+| `tests/characterisation/canvas-manager.spec.js` | +2 outline mask tests |
+| `tests/characterisation/brush-engine.spec.js` | +1 edge-aware brush test |
+| `ARCHITECTURE.md` | Updated counts, descriptions, resolved issues |
+| `REVIEW_BRIEF.md` | This file |
 
 ## Ready for /review
 [x] Yes

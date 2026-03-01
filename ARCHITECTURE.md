@@ -51,7 +51,7 @@ All canvases share the same dimensions, DPI-scaled: `canvas.width = containerWid
 | Module | File Path | Responsibility | Dependencies |
 |--------|-----------|----------------|--------------|
 | TouchGuard | `js/touch-guard.js` | Prevents browser gestures (pinch-zoom, context menu, double-tap zoom) from interfering with drawing on touch devices | None |
-| CanvasManager | `js/canvas-manager.js` | Creates and manages the 4-layer canvas system; handles sizing, DPI scaling, image loading, white-pixel transparency, composite rendering for save, and resize preservation. Provides shared utilities: `withNativeTransform()` (ADR-007) and `getCanvasPixelCoords()` (ADR-002) | None |
+| CanvasManager | `js/canvas-manager.js` | Creates and manages the 4-layer canvas system; handles sizing, DPI scaling, image loading, white-pixel transparency, composite rendering for save, resize preservation, and outline mask computation (ADR-008). Provides shared utilities: `withNativeTransform()` (ADR-007), `getCanvasPixelCoords()` (ADR-002), and `getOutlineMask()` (ADR-008) | None |
 | UndoManager | `js/undo-manager.js` | Stores up to 10 compressed PNG data URL snapshots of the coloring canvas; provides undo and history clearing | CanvasManager |
 | ColorPalette | `js/color-palette.js` | Renders a vertical grid of 20 kid-friendly color swatches; manages the currently selected color | None |
 | FloodFill | `js/flood-fill.js` | Iterative scanline stack-based flood fill with configurable tolerance for anti-aliased edges and outline boundary detection | CanvasManager, UndoManager |
@@ -123,16 +123,16 @@ New modules must be inserted at the correct point in this chain based on their d
 |------|-------------|
 | `scripts/static-server.js` | Minimal Node.js HTTP server serving project root on port 4173 with MIME type mapping and path traversal protection |
 
-### `tests/` — Test Suite (51 tests total)
+### `tests/` — Test Suite (54 tests total)
 
 | File | Description |
 |------|-------------|
 | `tests/smoke.spec.js` | 4 Playwright e2e smoke tests: app boot, brush stroke + undo, reference panel drag/resize, drawing persistence through viewport resize |
-| `tests/characterisation/canvas-manager.spec.js` | 7 characterisation tests for CanvasManager |
+| `tests/characterisation/canvas-manager.spec.js` | 9 characterisation tests for CanvasManager |
 | `tests/characterisation/undo-manager.spec.js` | 5 characterisation tests for UndoManager |
 | `tests/characterisation/color-palette.spec.js` | 5 characterisation tests for ColorPalette |
 | `tests/characterisation/flood-fill.spec.js` | 5 characterisation tests for FloodFill |
-| `tests/characterisation/brush-engine.spec.js` | 4 characterisation tests for BrushEngine |
+| `tests/characterisation/brush-engine.spec.js` | 5 characterisation tests for BrushEngine |
 | `tests/characterisation/toolbar.spec.js` | 7 characterisation tests for Toolbar |
 | `tests/characterisation/image-loader.spec.js` | 9 characterisation tests for ImageLoader |
 
@@ -141,7 +141,7 @@ New modules must be inserted at the correct point in this chain based on their d
 | File | Description |
 |------|-------------|
 | `docs/app_review_worldclass_status.md` | Review findings, world-class ideas, and current implementation status |
-| `docs/decisions/ADR-001` through `ADR-007` | Architecture Decision Records defining canonical patterns |
+| `docs/decisions/ADR-001` through `ADR-008` | Architecture Decision Records defining canonical patterns |
 
 ### Folders
 
@@ -153,9 +153,9 @@ New modules must be inserted at the correct point in this chain based on their d
 | `images/icons/` | PWA icon assets |
 | `scripts/` | Development tooling scripts |
 | `tests/` | Playwright e2e test specs |
-| `tests/characterisation/` | 47 characterisation tests across 7 module test files |
+| `tests/characterisation/` | 50 characterisation tests across 7 module test files |
 | `docs/` | Project documentation, roadmap, and Architecture Decision Records |
-| `docs/decisions/` | 7 ADRs defining canonical patterns (error handling, coordinates, visibility, booleans, event handlers, folder casing, canvas context reset) |
+| `docs/decisions/` | 8 ADRs defining canonical patterns (error handling, coordinates, visibility, booleans, event handlers, folder casing, canvas context reset, outline mask brush clipping) |
 | `.claude/commands/` | Claude Code custom slash commands (/review, /audit, /check) |
 | `.claude/rules/` | Claude Code rule files (ADR enforcement) |
 
@@ -189,7 +189,7 @@ New modules must be inserted at the correct point in this chain based on their d
 
 ## Known Issues
 
-1. **Touch guards are global** — All touch/gesture prevention listeners in `touch-guard.js` are attached to `document`, blocking accessibility features like text selection in modals and scrolling in the gallery grid. Should be scoped to `#canvas-container` only.
+1. ~~**Touch guards are global**~~ — **Resolved.** All touch/gesture prevention listeners in `touch-guard.js` are now scoped to `#canvas-container`, preserving text selection and scrolling in modals.
 2. ~~**Playwright tests never executed**~~ — **Resolved.** Dependencies installed, all 51 tests passing (4 smoke + 47 characterisation).
 3. **Only one coloring template** — `PRELOADED_COLORING_PAGES` in `image-loader.js` contains only `cat.svg`. The gallery and gallery grid CSS are ready for more, but no additional templates have been added.
 4. **No persistence** — All user work is lost on page reload. There is no local storage, IndexedDB, or cloud save mechanism.

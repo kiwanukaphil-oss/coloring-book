@@ -179,4 +179,36 @@ test.describe('CanvasManager', () => {
 
     expect(dataUrl).toMatch(/^data:image\/png;base64,/);
   });
+
+  test('outlineMask is null before loading a coloring page', async ({ page }) => {
+    const mask = await page.evaluate(() => CanvasManager.getOutlineMask());
+    expect(mask).toBeNull();
+  });
+
+  test('outlineMask is computed after loading a coloring page (ADR-008)', async ({ page }) => {
+    // Load a coloring page
+    const firstItem = page.locator('.gallery-item').first();
+    await expect(firstItem).toBeVisible();
+    await firstItem.click();
+    await page.waitForFunction(() => {
+      const region = CanvasManager?.getImageRegion?.();
+      return !!region && region.width > 0 && region.height > 0;
+    });
+
+    const maskInfo = await page.evaluate(() => {
+      const mask = CanvasManager.getOutlineMask();
+      if (!mask) return null;
+      const width = CanvasManager.getColoringCanvas().width;
+      const height = CanvasManager.getColoringCanvas().height;
+      let outlineCount = 0;
+      for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) outlineCount++;
+      }
+      return { length: mask.length, expectedLength: width * height, outlineCount };
+    });
+
+    expect(maskInfo).not.toBeNull();
+    expect(maskInfo.length).toBe(maskInfo.expectedLength);
+    expect(maskInfo.outlineCount).toBeGreaterThan(0);
+  });
 });

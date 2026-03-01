@@ -15,6 +15,8 @@
  *   - makeWhitePixelsTransparent: Removes white backgrounds from loaded outline images
  *   - renderCompositeForSave: Composites coloring + outline layers for PNG export
  *   - handleWindowResize: Snapshots and restores all layers when the viewport changes
+ *   - computeOutlineMask: Builds binary Uint8Array mask for edge-aware brush (ADR-008)
+ *   - getOutlineMask: Returns precomputed mask for O(1) outline pixel checks
  *
  * Dependencies: None (foundational module — all other modules depend on this)
  *
@@ -39,6 +41,11 @@ const CanvasManager = (() => {
     // Stores the loaded image dimensions/offset so other
     // modules know where the coloring page sits on the canvas
     let imageRegion = { x: 0, y: 0, width: 0, height: 0 };
+
+    // Binary mask where 1 = outline pixel, 0 = non-outline.
+    // Precomputed on template load for O(1) per-pixel lookups
+    // by the brush engine (ADR-008).
+    let outlineMask = null;
 
     // Wraps canvas operations that need to work at native pixel
     // resolution by saving the context, resetting its transform,
@@ -154,6 +161,7 @@ const CanvasManager = (() => {
                 );
 
                 makeWhitePixelsTransparent();
+                computeOutlineMask();
 
                 resolve(fitDimensions);
             };
@@ -256,6 +264,31 @@ const CanvasManager = (() => {
         });
     }
 
+    // Builds a binary lookup mask from the outline canvas so
+    // the brush engine can check "is this pixel an outline?"
+    // in O(1) without calling getImageData per stroke. Uses
+    // the same luminance/alpha thresholds as flood-fill.js
+    // isOutlinePixel() for consistency. (ADR-008)
+    function computeOutlineMask() {
+        const width = outlineCanvas.width;
+        const height = outlineCanvas.height;
+        const imageData = withNativeTransform(outlineCtx, (ctx) => {
+            return ctx.getImageData(0, 0, width, height);
+        });
+        const pixels = imageData.data;
+        outlineMask = new Uint8Array(width * height);
+
+        for (let i = 0; i < outlineMask.length; i++) {
+            const idx = i * 4;
+            const a = pixels[idx + 3];
+            if (a < 128) continue;
+            const luminance = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
+            if (luminance < 80) {
+                outlineMask[i] = 1;
+            }
+        }
+    }
+
     function clearAllCanvases() {
         withNativeTransform(coloringCtx, (ctx) => {
             ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
@@ -267,6 +300,7 @@ const CanvasManager = (() => {
             ctx.clearRect(0, 0, interactionCanvas.width, interactionCanvas.height);
         });
         clearReferenceCanvas();
+        outlineMask = null;
     }
 
     function clearColoringCanvas() {
@@ -308,6 +342,11 @@ const CanvasManager = (() => {
         restoreScaledSnapshot(coloringCtx, coloringCanvas, coloringSnapshot);
         restoreScaledSnapshot(referenceCtx, referenceCanvas, referenceSnapshot);
         restoreScaledSnapshot(outlineCtx, outlineCanvas, outlineSnapshot);
+
+        // Recompute mask from rescaled outline pixels (ADR-008)
+        if (outlineMask) {
+            computeOutlineMask();
+        }
     }
 
     function captureCanvasSnapshot(sourceCanvas) {
@@ -357,6 +396,7 @@ const CanvasManager = (() => {
         getOutlineContext: () => outlineCtx,
         getInteractionCanvas: () => interactionCanvas,
         getInteractionContext: () => interactionCtx,
+        getOutlineMask: () => outlineMask,
         getImageRegion: () => imageRegion,
         getContainerElement: () => container
     };

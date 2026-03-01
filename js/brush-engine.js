@@ -10,6 +10,7 @@
  *   - handlePointerDown: Starts a stroke, saves undo snapshot, draws initial dot
  *   - handlePointerMove: Draws line segments using coalesced events for smoothness
  *   - handlePointerUp: Ends the stroke and releases pointer capture
+ *   - restoreOutlinePixels: Resets outline pixels to white after each draw (ADR-008)
  *   - setBrushSize / getBrushSize: Controls the stroke width
  *
  * Dependencies: CanvasManager, Toolbar, UndoManager, ColorPalette
@@ -55,6 +56,13 @@ const BrushEngine = (() => {
             ctx.beginPath();
             ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
             ctx.fill();
+
+            // Restore outline pixels that the dot may have covered (ADR-008)
+            const halfBrush = brushSize / 2 + 2;
+            restoreOutlinePixels(ctx,
+                coords.x - halfBrush, coords.y - halfBrush,
+                brushSize + 4, brushSize + 4
+            );
         });
     }
 
@@ -78,16 +86,83 @@ const BrushEngine = (() => {
                 ? event.getCoalescedEvents()
                 : [event];
 
+            // Track bounding box across all coalesced segments
+            // for a single outline-pixel restoration pass (ADR-008)
+            let minX = lastX;
+            let minY = lastY;
+            let maxX = lastX;
+            let maxY = lastY;
+
             for (const coalescedEvent of coalescedEvents) {
                 const coords = CanvasManager.getCanvasPixelCoords(coalescedEvent);
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
                 ctx.lineTo(coords.x, coords.y);
                 ctx.stroke();
+
+                minX = Math.min(minX, coords.x);
+                minY = Math.min(minY, coords.y);
+                maxX = Math.max(maxX, coords.x);
+                maxY = Math.max(maxY, coords.y);
+
                 lastX = coords.x;
                 lastY = coords.y;
             }
+
+            // Restore outline pixels in the affected bounding box (ADR-008)
+            const halfBrush = brushSize / 2 + 2;
+            restoreOutlinePixels(ctx,
+                minX - halfBrush, minY - halfBrush,
+                (maxX - minX) + brushSize + 4,
+                (maxY - minY) + brushSize + 4
+            );
         });
+    }
+
+    // After drawing a brush segment, resets any pixels that
+    // overlap with outline boundaries back to white. This keeps
+    // paint "inside the lines." Only operates on the small
+    // bounding box of the affected stroke segment for performance.
+    // Skips entirely when no outline mask is loaded. (ADR-008)
+    function restoreOutlinePixels(ctx, regionX, regionY, regionWidth, regionHeight) {
+        const mask = CanvasManager.getOutlineMask();
+        if (!mask) return;
+
+        const canvasWidth = CanvasManager.getColoringCanvas().width;
+        const canvasHeight = CanvasManager.getColoringCanvas().height;
+
+        // Clamp to canvas bounds
+        const x0 = Math.max(0, Math.floor(regionX));
+        const y0 = Math.max(0, Math.floor(regionY));
+        const x1 = Math.min(canvasWidth, Math.ceil(regionX + regionWidth));
+        const y1 = Math.min(canvasHeight, Math.ceil(regionY + regionHeight));
+        const w = x1 - x0;
+        const h = y1 - y0;
+        if (w <= 0 || h <= 0) return;
+
+        const imageData = ctx.getImageData(x0, y0, w, h);
+        const pixels = imageData.data;
+        let hasOutlineOverlap = false;
+
+        for (let row = 0; row < h; row++) {
+            for (let col = 0; col < w; col++) {
+                const maskIndex = (y0 + row) * canvasWidth + (x0 + col);
+                if (mask[maskIndex] === 1) {
+                    const pixelIndex = (row * w + col) * 4;
+                    // Restore outline pixels to white so the outline
+                    // layer (z-3) renders cleanly on top
+                    pixels[pixelIndex] = 255;
+                    pixels[pixelIndex + 1] = 255;
+                    pixels[pixelIndex + 2] = 255;
+                    pixels[pixelIndex + 3] = 255;
+                    hasOutlineOverlap = true;
+                }
+            }
+        }
+
+        if (hasOutlineOverlap) {
+            ctx.putImageData(imageData, x0, y0);
+        }
     }
 
     function handlePointerUp(event) {

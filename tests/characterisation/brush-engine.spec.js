@@ -90,4 +90,69 @@ test.describe('BrushEngine', () => {
     expect(hadStepsBefore).toBe(false);
     expect(hasStepsAfter).toBe(true);
   });
+
+  test('brush stroke does not paint on outline pixels (ADR-008)', async ({ page }) => {
+    // Load a coloring page so the outline mask is computed
+    const firstItem = page.locator('.gallery-item').first();
+    await expect(firstItem).toBeVisible();
+    await firstItem.click();
+    await page.waitForFunction(() => {
+      const region = CanvasManager?.getImageRegion?.();
+      return !!region && region.width > 0 && region.height > 0;
+    });
+
+    // Verify the outline mask was computed
+    const hasMask = await page.evaluate(() => CanvasManager.getOutlineMask() !== null);
+    expect(hasMask).toBe(true);
+
+    // Find outline pixel positions on the coloring canvas
+    const outlineInfo = await page.evaluate(() => {
+      const mask = CanvasManager.getOutlineMask();
+      const width = CanvasManager.getColoringCanvas().width;
+      let outlinePixelCount = 0;
+      for (let i = 0; i < mask.length; i++) {
+        if (mask[i] === 1) outlinePixelCount++;
+      }
+      return { outlinePixelCount, width };
+    });
+    expect(outlineInfo.outlinePixelCount).toBeGreaterThan(0);
+
+    // Switch to brush and draw a large stroke across the canvas
+    await page.click('#tool-brush');
+    await page.evaluate(() => BrushEngine.setBrushSize(40));
+
+    const canvas = page.locator('#interaction-canvas');
+    const box = await canvas.boundingBox();
+
+    // Draw a horizontal stroke across the middle of the canvas
+    const startX = box.x + box.width * 0.1;
+    const endX = box.x + box.width * 0.9;
+    const midY = box.y + box.height * 0.5;
+
+    await page.mouse.move(startX, midY);
+    await page.mouse.down();
+    await page.mouse.move(endX, midY, { steps: 20 });
+    await page.mouse.up();
+
+    // Check that outline pixels on the coloring canvas are still white
+    const outlinePixelsAreWhite = await page.evaluate(() => {
+      const mask = CanvasManager.getOutlineMask();
+      const c = CanvasManager.getColoringCanvas();
+      const ctx = CanvasManager.getColoringContext();
+      return CanvasManager.withNativeTransform(ctx, (ct) => {
+        const data = ct.getImageData(0, 0, c.width, c.height).data;
+        let outlinesPaintedOver = 0;
+        for (let i = 0; i < mask.length; i++) {
+          if (mask[i] === 1) {
+            const idx = i * 4;
+            const isWhite = data[idx] === 255 && data[idx + 1] === 255 && data[idx + 2] === 255;
+            if (!isWhite) outlinesPaintedOver++;
+          }
+        }
+        return outlinesPaintedOver;
+      });
+    });
+
+    expect(outlinePixelsAreWhite).toBe(0);
+  });
 });
