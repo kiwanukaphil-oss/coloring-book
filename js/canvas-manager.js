@@ -1,10 +1,27 @@
-/* ========================================
-   Canvas Manager
-   Creates and manages the 4-layer canvas
-   system: coloring (bottom), reference (guide),
-   outline, and interaction (top). Handles sizing,
-   image loading, and composite rendering.
-   ======================================== */
+/**
+ * Canvas Manager
+ *
+ * Responsible for: Creating and managing the 4-layer canvas system (coloring, reference,
+ *   outline, interaction), DPI-aware sizing, image loading, and composite rendering.
+ * NOT responsible for: Drawing strokes (BrushEngine), flood fill logic (FloodFill),
+ *   or undo state (UndoManager).
+ *
+ * Key functions:
+ *   - withNativeTransform: Wraps canvas ops at native pixel resolution (ADR-007)
+ *   - getCanvasPixelCoords: Converts CSS event coords to canvas pixel coords (ADR-002)
+ *   - loadOutlineImage: Loads a coloring page onto the outline layer
+ *   - loadReferenceImage: Loads a guide image onto the reference layer
+ *   - resizeCanvasesToFitContainer: Recalculates canvas dimensions on viewport change
+ *   - makeWhitePixelsTransparent: Removes white backgrounds from loaded outline images
+ *   - renderCompositeForSave: Composites coloring + outline layers for PNG export
+ *   - handleWindowResize: Snapshots and restores all layers when the viewport changes
+ *
+ * Dependencies: None (foundational module — all other modules depend on this)
+ *
+ * Notes: Canvas resolution is capped at MAX_CANVAS_DIMENSION (2048) to prevent
+ *   performance issues on high-DPI tablets. All drawing must go through
+ *   withNativeTransform to bypass the DPI scale factor applied via ctx.scale().
+ */
 
 const CanvasManager = (() => {
     const MAX_CANVAS_DIMENSION = 2048;
@@ -23,6 +40,36 @@ const CanvasManager = (() => {
     // modules know where the coloring page sits on the canvas
     let imageRegion = { x: 0, y: 0, width: 0, height: 0 };
 
+    // Wraps canvas operations that need to work at native pixel
+    // resolution by saving the context, resetting its transform,
+    // running the callback, then restoring. Returns whatever the
+    // callback returns so callers can retrieve getImageData etc.
+    function withNativeTransform(ctx, callback) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const result = callback(ctx);
+        ctx.restore();
+        return result;
+    }
+
+    // Converts a pointer event's CSS coordinates to native canvas
+    // pixel coordinates, accounting for the DPI scale factor.
+    // All modules should use this instead of computing the
+    // conversion themselves.
+    function getCanvasPixelCoords(event) {
+        const rect = interactionCanvas.getBoundingClientRect();
+        const scaleX = interactionCanvas.width / rect.width;
+        const scaleY = interactionCanvas.height / rect.height;
+        return {
+            x: (event.clientX - rect.left) * scaleX,
+            y: (event.clientY - rect.top) * scaleY
+        };
+    }
+
+    // Grabs DOM elements and creates drawing contexts. Three of the four
+    // contexts use willReadFrequently because flood fill and undo both
+    // call getImageData extensively — this hint lets the browser optimize
+    // for frequent pixel reads instead of GPU-accelerated rendering.
     function initialize() {
         container = document.getElementById('canvas-container');
         coloringCanvas = document.getElementById('coloring-canvas');
@@ -71,11 +118,10 @@ const CanvasManager = (() => {
     }
 
     function fillColoringCanvasWhite() {
-        coloringCtx.save();
-        coloringCtx.setTransform(1, 0, 0, 1, 0, 0);
-        coloringCtx.fillStyle = '#ffffff';
-        coloringCtx.fillRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        coloringCtx.restore();
+        withNativeTransform(coloringCtx, (ctx) => {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, coloringCanvas.width, coloringCanvas.height);
+        });
     }
 
     // Loads a coloring page image onto the outline canvas,
@@ -186,63 +232,54 @@ const CanvasManager = (() => {
     // pixels remain visible. This handles images/SVGs that have
     // solid white backgrounds.
     function makeWhitePixelsTransparent() {
-        outlineCtx.save();
-        outlineCtx.setTransform(1, 0, 0, 1, 0, 0);
-        const imageData = outlineCtx.getImageData(0, 0, outlineCanvas.width, outlineCanvas.height);
-        const pixels = imageData.data;
+        withNativeTransform(outlineCtx, (ctx) => {
+            const imageData = ctx.getImageData(0, 0, outlineCanvas.width, outlineCanvas.height);
+            const pixels = imageData.data;
 
-        for (let i = 0; i < pixels.length; i += 4) {
-            const r = pixels[i];
-            const g = pixels[i + 1];
-            const b = pixels[i + 2];
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i];
+                const g = pixels[i + 1];
+                const b = pixels[i + 2];
+                const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
-            if (luminance > 200) {
-                // Light pixel — make fully transparent
-                pixels[i + 3] = 0;
-            } else if (luminance > 80) {
-                // Anti-aliased fringe — partial transparency for smooth edges
-                pixels[i + 3] = Math.floor(255 * (1 - (luminance - 80) / 120));
+                if (luminance > 200) {
+                    // Light pixel — make fully transparent
+                    pixels[i + 3] = 0;
+                } else if (luminance > 80) {
+                    // Anti-aliased fringe — partial transparency for smooth edges
+                    pixels[i + 3] = Math.floor(255 * (1 - (luminance - 80) / 120));
+                }
+                // Dark pixels (luminance <= 80) stay fully opaque
             }
-            // Dark pixels (luminance <= 80) stay fully opaque
-        }
 
-        outlineCtx.putImageData(imageData, 0, 0);
-        outlineCtx.restore();
+            ctx.putImageData(imageData, 0, 0);
+        });
     }
 
     function clearAllCanvases() {
-        coloringCtx.save();
-        coloringCtx.setTransform(1, 0, 0, 1, 0, 0);
-        coloringCtx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        coloringCtx.restore();
-
-        outlineCtx.save();
-        outlineCtx.setTransform(1, 0, 0, 1, 0, 0);
-        outlineCtx.clearRect(0, 0, outlineCanvas.width, outlineCanvas.height);
-        outlineCtx.restore();
-
-        interactionCtx.save();
-        interactionCtx.setTransform(1, 0, 0, 1, 0, 0);
-        interactionCtx.clearRect(0, 0, interactionCanvas.width, interactionCanvas.height);
-        interactionCtx.restore();
-
+        withNativeTransform(coloringCtx, (ctx) => {
+            ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
+        });
+        withNativeTransform(outlineCtx, (ctx) => {
+            ctx.clearRect(0, 0, outlineCanvas.width, outlineCanvas.height);
+        });
+        withNativeTransform(interactionCtx, (ctx) => {
+            ctx.clearRect(0, 0, interactionCanvas.width, interactionCanvas.height);
+        });
         clearReferenceCanvas();
     }
 
     function clearColoringCanvas() {
-        coloringCtx.save();
-        coloringCtx.setTransform(1, 0, 0, 1, 0, 0);
-        coloringCtx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        coloringCtx.restore();
+        withNativeTransform(coloringCtx, (ctx) => {
+            ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
+        });
         fillColoringCanvasWhite();
     }
 
     function clearReferenceCanvas() {
-        referenceCtx.save();
-        referenceCtx.setTransform(1, 0, 0, 1, 0, 0);
-        referenceCtx.clearRect(0, 0, referenceCanvas.width, referenceCanvas.height);
-        referenceCtx.restore();
+        withNativeTransform(referenceCtx, (ctx) => {
+            ctx.clearRect(0, 0, referenceCanvas.width, referenceCanvas.height);
+        });
     }
 
     // Composites the coloring and outline layers onto an offscreen
@@ -285,15 +322,14 @@ const CanvasManager = (() => {
     }
 
     function restoreScaledSnapshot(targetCtx, targetCanvas, snapshotCanvas) {
-        targetCtx.save();
-        targetCtx.setTransform(1, 0, 0, 1, 0, 0);
-        targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-        targetCtx.drawImage(
-            snapshotCanvas,
-            0, 0, snapshotCanvas.width, snapshotCanvas.height,
-            0, 0, targetCanvas.width, targetCanvas.height
-        );
-        targetCtx.restore();
+        withNativeTransform(targetCtx, (ctx) => {
+            ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+            ctx.drawImage(
+                snapshotCanvas,
+                0, 0, snapshotCanvas.width, snapshotCanvas.height,
+                0, 0, targetCanvas.width, targetCanvas.height
+            );
+        });
     }
 
     // Returns the pixel-ratio-aware scale factor used by the canvas,
@@ -304,6 +340,8 @@ const CanvasManager = (() => {
 
     return {
         initialize,
+        withNativeTransform,
+        getCanvasPixelCoords,
         loadOutlineImage,
         loadReferenceImage,
         clearColoringCanvas,

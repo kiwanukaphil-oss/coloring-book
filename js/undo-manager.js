@@ -1,9 +1,22 @@
-/* ========================================
-   Undo Manager
-   Stores compressed snapshots of the coloring
-   canvas as PNG data URLs. Supports up to 10
-   undo steps with minimal memory footprint.
-   ======================================== */
+/**
+ * Undo Manager
+ *
+ * Responsible for: Storing compressed snapshots of the coloring canvas as PNG data URLs
+ *   and restoring them on undo, supporting up to 10 steps.
+ * NOT responsible for: Deciding when to snapshot — callers (BrushEngine, FloodFill,
+ *   Toolbar) trigger saveSnapshot at the appropriate moment.
+ *
+ * Key functions:
+ *   - saveSnapshot: Captures current coloring canvas state as a PNG data URL
+ *   - undoLastAction: Restores the most recent snapshot onto the canvas
+ *   - clearHistory: Discards all snapshots (used when loading a new coloring page)
+ *   - hasUndoSteps: Returns whether any undo steps are available
+ *
+ * Dependencies: CanvasManager
+ *
+ * Notes: Snapshots are stored as PNG data URLs rather than raw ImageData to reduce
+ *   memory usage (~10x smaller). The trade-off is a small decode cost on undo.
+ */
 
 const UndoManager = (() => {
     const MAX_UNDO_STEPS = 10;
@@ -39,11 +52,10 @@ const UndoManager = (() => {
 
         return new Promise((resolve) => {
             image.onload = () => {
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(image, 0, 0);
-                ctx.restore();
+                CanvasManager.withNativeTransform(ctx, (c) => {
+                    c.clearRect(0, 0, canvas.width, canvas.height);
+                    c.drawImage(image, 0, 0);
+                });
                 resolve(true);
             };
             image.src = dataUrl;

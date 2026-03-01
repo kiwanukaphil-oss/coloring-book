@@ -1,11 +1,24 @@
-/* ========================================
-   Service Worker
-   Hybrid strategy for offline support:
-   - Network-first for HTML/navigation
-   - Stale-while-revalidate for static assets
-   Improves update freshness while retaining
-   strong offline behavior.
-   ======================================== */
+/**
+ * Service Worker
+ *
+ * Responsible for: Providing offline support via hybrid caching — network-first for
+ *   HTML/navigation, stale-while-revalidate for static assets (JS, CSS, images).
+ * NOT responsible for: Application logic — this runs in a separate thread and only
+ *   intercepts network requests.
+ *
+ * Key functions:
+ *   - networkFirst: Tries network, falls back to cache (used for navigation)
+ *   - staleWhileRevalidate: Serves cache immediately, refreshes in background
+ *   - isNavigationRequest: Identifies page navigation requests
+ *   - isStaticAssetRequest: Identifies cacheable static asset requests
+ *   - cacheResponse: Stores a response clone in the versioned cache
+ *
+ * Dependencies: None (runs independently in the service worker thread)
+ *
+ * Notes: CACHE_VERSION must be bumped when assets change to trigger cache refresh.
+ *   The activate handler deletes old cache versions automatically. Navigation
+ *   requests fall back to index.html for SPA-style routing support.
+ */
 
 const CACHE_VERSION = 'coloring-book-v4';
 
@@ -58,6 +71,9 @@ function isNavigationRequest(request) {
     return request.mode === 'navigate';
 }
 
+// Identifies same-origin GET requests for files that change infrequently
+// and benefit from stale-while-revalidate. Checks both file extensions
+// and known asset directories to catch all static resources.
 function isStaticAssetRequest(request) {
     if (request.method !== 'GET') return false;
     const url = new URL(request.url);
@@ -83,6 +99,10 @@ function cacheResponse(request, response) {
     return caches.open(CACHE_VERSION).then((cache) => cache.put(request, response.clone()));
 }
 
+// Tries the network first so navigation always gets the latest HTML.
+// On failure (offline), falls back to the cached version. If no cached
+// version exists at all, serves index.html as a last resort so the
+// app shell still loads.
 function networkFirst(request) {
     return fetch(request)
         .then((networkResponse) => {
@@ -97,6 +117,9 @@ function networkFirst(request) {
         });
 }
 
+// Returns the cached version immediately for fast rendering, while
+// fetching a fresh copy in the background to update the cache for
+// next time. If nothing is cached yet, waits for the network response.
 function staleWhileRevalidate(request) {
     return caches.match(request).then((cachedResponse) => {
         const networkPromise = fetch(request)

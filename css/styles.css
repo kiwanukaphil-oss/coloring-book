@@ -80,6 +80,10 @@ html, body {
     touch-action: none;
 }
 
+.reference-panel.hidden {
+    display: none;
+}
+
 .reference-panel-handle {
     height: 34px;
     background-color: #1E88E5;
@@ -312,6 +316,10 @@ html, body {
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.1s ease;
     background-color: #fafafa;
+}
+
+.gallery-item.hidden {
+    display: none;
 }
 
 .gallery-item:hover {

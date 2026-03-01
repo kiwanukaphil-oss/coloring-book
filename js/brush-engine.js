@@ -1,10 +1,23 @@
-/* ========================================
-   Brush Engine
-   Handles free-hand painting with Pointer
-   Events. Uses coalesced events for smooth
-   strokes on touch devices. Draws onto the
-   coloring canvas with round line caps.
-   ======================================== */
+/**
+ * Brush Engine
+ *
+ * Responsible for: Handling free-hand painting via Pointer Events, drawing smooth
+ *   strokes onto the coloring canvas using coalesced events and round line caps.
+ * NOT responsible for: Tool selection (Toolbar), color choice (ColorPalette),
+ *   or managing undo history beyond triggering a snapshot at stroke start.
+ *
+ * Key functions:
+ *   - handlePointerDown: Starts a stroke, saves undo snapshot, draws initial dot
+ *   - handlePointerMove: Draws line segments using coalesced events for smoothness
+ *   - handlePointerUp: Ends the stroke and releases pointer capture
+ *   - setBrushSize / getBrushSize: Controls the stroke width
+ *
+ * Dependencies: CanvasManager, Toolbar, UndoManager, ColorPalette
+ *
+ * Notes: Uses pointer capture so strokes continue even if the finger/mouse leaves
+ *   the canvas mid-stroke. Coalesced events (getCoalescedEvents API) provide
+ *   sub-frame touch positions for smoother lines on mobile devices.
+ */
 
 const BrushEngine = (() => {
     let isDrawing = false;
@@ -32,19 +45,17 @@ const BrushEngine = (() => {
         // Save undo snapshot at the start of each stroke
         UndoManager.saveSnapshot();
 
-        const coords = getCanvasCoords(event);
+        const coords = CanvasManager.getCanvasPixelCoords(event);
         lastX = coords.x;
         lastY = coords.y;
 
         // Draw a dot at the starting point for single taps
-        const ctx = CanvasManager.getColoringContext();
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.fillStyle = ColorPalette.getCurrentColor();
-        ctx.beginPath();
-        ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+            ctx.fillStyle = ColorPalette.getCurrentColor();
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        });
     }
 
     // Processes pointer movement during a brush stroke. Uses
@@ -56,50 +67,33 @@ const BrushEngine = (() => {
 
         event.preventDefault();
 
-        const ctx = CanvasManager.getColoringContext();
-        ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.strokeStyle = ColorPalette.getCurrentColor();
-        ctx.lineWidth = brushSize;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+            ctx.strokeStyle = ColorPalette.getCurrentColor();
+            ctx.lineWidth = brushSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
 
-        // Use coalesced events for smoother strokes (when available)
-        const coalescedEvents = event.getCoalescedEvents
-            ? event.getCoalescedEvents()
-            : [event];
+            // Use coalesced events for smoother strokes (when available)
+            const coalescedEvents = event.getCoalescedEvents
+                ? event.getCoalescedEvents()
+                : [event];
 
-        for (const coalescedEvent of coalescedEvents) {
-            const coords = getCanvasCoords(coalescedEvent);
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(coords.x, coords.y);
-            ctx.stroke();
-            lastX = coords.x;
-            lastY = coords.y;
-        }
-
-        ctx.restore();
+            for (const coalescedEvent of coalescedEvents) {
+                const coords = CanvasManager.getCanvasPixelCoords(coalescedEvent);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(coords.x, coords.y);
+                ctx.stroke();
+                lastX = coords.x;
+                lastY = coords.y;
+            }
+        });
     }
 
     function handlePointerUp(event) {
         if (!isDrawing) return;
         event.target.releasePointerCapture?.(event.pointerId);
         isDrawing = false;
-    }
-
-    // Converts pointer event CSS coordinates to native canvas
-    // pixel coordinates so drawing remains correct regardless
-    // of the context's current transform.
-    function getCanvasCoords(event) {
-        const canvas = CanvasManager.getInteractionCanvas();
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        return {
-            x: (event.clientX - rect.left) * scaleX,
-            y: (event.clientY - rect.top) * scaleY
-        };
     }
 
     function setBrushSize(size) {

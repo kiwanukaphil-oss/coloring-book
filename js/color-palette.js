@@ -1,9 +1,21 @@
-/* ========================================
-   Color Palette
-   Renders a vertical grid of kid-friendly
-   color swatches on the right side panel.
-   Manages the currently selected color.
-   ======================================== */
+/**
+ * Color Palette
+ *
+ * Responsible for: Rendering a vertical grid of kid-friendly color swatches and
+ *   tracking the currently selected color.
+ * NOT responsible for: Applying the color to the canvas — BrushEngine and FloodFill
+ *   read the current color via getCurrentColor().
+ *
+ * Key functions:
+ *   - initialize: Builds swatch buttons and sets up selection handlers
+ *   - selectColor: Updates the active color and highlights the chosen swatch
+ *   - getCurrentColor: Returns the hex string of the selected color
+ *
+ * Dependencies: None (standalone UI module)
+ *
+ * Notes: The white swatch (#FFFFFF) gets a visible border so it doesn't disappear
+ *   against the white panel background. Colors are hardcoded for simplicity.
+ */
 
 const ColorPalette = (() => {
     const KID_FRIENDLY_COLORS = [

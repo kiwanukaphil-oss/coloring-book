@@ -7,7 +7,7 @@ async function loadDefaultColoringPage(page) {
   await expect(firstGalleryItem).toBeVisible();
   await firstGalleryItem.click();
   await page.waitForFunction(() => {
-    const region = window.CanvasManager?.getImageRegion?.();
+    const region = CanvasManager?.getImageRegion?.();
     return !!region && region.width > 0 && region.height > 0;
   });
 }
@@ -28,7 +28,7 @@ test('brush stroke is undoable', async ({ page }) => {
   expect(box).toBeTruthy();
 
   const beforeStroke = await page.evaluate(() => {
-    return window.CanvasManager.getColoringCanvas().toDataURL('image/png');
+    return CanvasManager.getColoringCanvas().toDataURL('image/png');
   });
 
   const startX = box.x + box.width * 0.3;
@@ -42,7 +42,7 @@ test('brush stroke is undoable', async ({ page }) => {
   await page.mouse.up();
 
   const afterStroke = await page.evaluate(() => {
-    return window.CanvasManager.getColoringCanvas().toDataURL('image/png');
+    return CanvasManager.getColoringCanvas().toDataURL('image/png');
   });
   expect(afterStroke).not.toBe(beforeStroke);
 
@@ -50,7 +50,7 @@ test('brush stroke is undoable', async ({ page }) => {
   await page.waitForTimeout(120);
 
   const afterUndo = await page.evaluate(() => {
-    return window.CanvasManager.getColoringCanvas().toDataURL('image/png');
+    return CanvasManager.getColoringCanvas().toDataURL('image/png');
   });
   expect(afterUndo).toBe(beforeStroke);
 });
@@ -108,8 +108,8 @@ test('drawing persists through viewport resize', async ({ page }) => {
   await page.mouse.up();
 
   const hasInkBeforeResize = await page.evaluate(() => {
-    const canvasEl = window.CanvasManager.getColoringCanvas();
-    const ctx = window.CanvasManager.getColoringContext();
+    const canvasEl = CanvasManager.getColoringCanvas();
+    const ctx = CanvasManager.getColoringContext();
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const data = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height).data;
@@ -128,8 +128,8 @@ test('drawing persists through viewport resize', async ({ page }) => {
   await page.waitForTimeout(200);
 
   const hasInkAfterResize = await page.evaluate(() => {
-    const canvasEl = window.CanvasManager.getColoringCanvas();
-    const ctx = window.CanvasManager.getColoringContext();
+    const canvasEl = CanvasManager.getColoringCanvas();
+    const ctx = CanvasManager.getColoringContext();
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const data = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height).data;

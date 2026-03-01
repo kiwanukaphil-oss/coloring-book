@@ -1,9 +1,23 @@
-/* ========================================
-   App Initialization
-   Entry point that bootstraps all modules
-   in the correct order and registers the
-   service worker for PWA offline support.
-   ======================================== */
+/**
+ * App Initialization
+ *
+ * Responsible for: Bootstrapping all modules in dependency order and registering
+ *   the service worker for PWA offline support.
+ * NOT responsible for: Any runtime application logic — each module manages its own
+ *   behavior after initialization.
+ *
+ * Key functions:
+ *   - initializeColoringBookApp: IIFE that calls initialize() on all modules in order
+ *   - registerServiceWorker: Registers the service worker (logs warning on failure)
+ *   - showGalleryOnFirstLoad: Opens the gallery modal so the user picks a page
+ *
+ * Dependencies: TouchGuard, CanvasManager, ColorPalette, BrushEngine, ImageLoader,
+ *   Toolbar (all modules)
+ *
+ * Notes: Module initialization order matters — CanvasManager must come before any
+ *   module that reads canvas elements, and Toolbar must come last because it wires
+ *   up event handlers that reference all other modules.
+ */
 
 (function initializeColoringBookApp() {
     // Initialize modules in dependency order:
@@ -30,9 +44,6 @@ function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker
             .register('./service-worker.js')
-            .then(() => {
-                console.log('Service worker registered');
-            })
             .catch((error) => {
                 console.warn('Service worker registration failed:', error);
             });

@@ -1,9 +1,26 @@
-/* ========================================
-   Image Loader
-   Manages the coloring page gallery with
-   pre-loaded images and device file upload.
-   Handles loading images onto the canvas.
-   ======================================== */
+/**
+ * Image Loader
+ *
+ * Responsible for: Managing the coloring page gallery (pre-loaded thumbnails and device
+ *   uploads), the draggable/resizable reference image panel, and loading images onto
+ *   the canvas.
+ * NOT responsible for: Canvas rendering or image processing — CanvasManager handles
+ *   the actual drawing, white-pixel removal, and layer management.
+ *
+ * Key functions:
+ *   - buildGalleryThumbnails: Creates clickable cards for each pre-loaded coloring page
+ *   - loadColoringPage: Loads a selected image onto the outline canvas, resets undo
+ *   - setupUploadHandler: Wires the file input for user-uploaded coloring pages
+ *   - setupReferenceUploadHandler: Wires the file input for reference guide images
+ *   - handleReferencePanelPointerMove: Handles drag and resize of the reference panel
+ *   - showReferencePanel / hideReferencePanel: Controls reference panel visibility
+ *
+ * Dependencies: CanvasManager, UndoManager
+ *
+ * Notes: The reference panel uses pointer capture for reliable drag/resize across
+ *   the entire viewport. Panel position is clamped to the canvas container bounds.
+ *   Gallery cards auto-hide if their thumbnail image fails to load (file not found).
+ */
 
 const ImageLoader = (() => {
     // Add more entries here as you place new images in images/coloring-pages/
@@ -32,6 +49,9 @@ const ImageLoader = (() => {
     const REFERENCE_PANEL_MIN_WIDTH = 140;
     const REFERENCE_PANEL_MIN_HEIGHT = 120;
 
+    // Caches all DOM references up front and wires sub-components.
+    // The reference preview image gets an error listener so a broken
+    // image source is cleared instead of showing a broken icon.
     function initialize() {
         galleryModal = document.getElementById('image-gallery-modal');
         galleryGrid = document.getElementById('gallery-grid');
@@ -69,7 +89,7 @@ const ImageLoader = (() => {
 
             // If the thumbnail fails to load (file not found), hide the card
             img.onerror = () => {
-                card.style.display = 'none';
+                card.classList.add('hidden');
             };
 
             card.appendChild(img);
@@ -123,6 +143,9 @@ const ImageLoader = (() => {
         });
     }
 
+    // Pointermove and pointerup listen on window (not the panel) so
+    // dragging and resizing continue even when the pointer leaves
+    // the panel bounds during fast movements.
     function setupReferencePanelInteractions() {
         referencePanelHandle.addEventListener('pointerdown', handleReferencePanelPointerDown);
         referencePanelResize.addEventListener('pointerdown', handleReferencePanelResizePointerDown);
@@ -150,6 +173,9 @@ const ImageLoader = (() => {
         event.preventDefault();
     }
 
+    // Records the panel's starting dimensions and pointer position so
+    // handleReferencePanelPointerMove can compute deltas during resize.
+    // Explicitly clears drag state to prevent conflicting interactions.
     function handleReferencePanelResizePointerDown(event) {
         if (referencePanel.classList.contains('hidden')) return;
 
@@ -168,6 +194,11 @@ const ImageLoader = (() => {
         event.stopPropagation();
     }
 
+    // Handles both resize and drag in a single pointermove listener.
+    // Resize is checked first because it takes priority — if the user
+    // starts resizing from the corner handle, drag must not interfere.
+    // Both operations clamp to the canvas container bounds so the panel
+    // never extends outside the visible area.
     function handleReferencePanelPointerMove(event) {
         if (isResizingReferencePanel && event.pointerId === resizePointerId) {
             const container = CanvasManager.getContainerElement();
@@ -211,6 +242,8 @@ const ImageLoader = (() => {
         referencePanel.style.top = clampedTop + 'px';
     }
 
+    // Ends whichever interaction (resize or drag) matches the released
+    // pointer. Checks resize first to mirror the priority in pointermove.
     function handleReferencePanelPointerUp(event) {
         if (isResizingReferencePanel && event.pointerId === resizePointerId) {
             referencePanelResize.releasePointerCapture?.(event.pointerId);
@@ -279,7 +312,7 @@ const ImageLoader = (() => {
                 UndoManager.saveSnapshot();
             })
             .catch((error) => {
-                console.error('Failed to load coloring page:', error);
+                console.warn('Failed to load coloring page:', error);
             });
     }
 

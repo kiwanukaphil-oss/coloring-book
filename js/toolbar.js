@@ -1,10 +1,25 @@
-/* ========================================
-   Toolbar
-   Manages tool selection (fill vs brush),
-   brush size slider, clear/undo/save/gallery
-   button actions, and the clear confirmation
-   dialog.
-   ======================================== */
+/**
+ * Toolbar
+ *
+ * Responsible for: Managing tool selection (fill vs brush), brush size slider,
+ *   clear/undo/save/gallery button actions, and the clear confirmation dialog.
+ * NOT responsible for: Performing drawing (BrushEngine), executing fills (FloodFill),
+ *   or managing canvas layers (CanvasManager).
+ *
+ * Key functions:
+ *   - setupToolSwitching: Wires fill/brush toggle buttons
+ *   - setupClearButton: Shows confirmation dialog before clearing the canvas
+ *   - setupSaveButton: Composites layers and triggers PNG download
+ *   - setupFillTapHandler: Distinguishes taps from drags for flood fill
+ *   - getActiveTool: Returns 'fill' or 'brush'
+ *
+ * Dependencies: CanvasManager, FloodFill, ColorPalette, BrushEngine, UndoManager,
+ *   ImageLoader
+ *
+ * Notes: Fill uses a 10px movement threshold to distinguish taps from drags —
+ *   this prevents accidental fills when the user is panning on mobile. Must be
+ *   initialized last because it depends on all other modules.
+ */
 
 const Toolbar = (() => {
     let activeTool = 'fill'; // 'fill' or 'brush'
@@ -113,7 +128,7 @@ const Toolbar = (() => {
     // flood fill at that position with the selected color.
     function setupFillTapHandler() {
         const interactionCanvas = CanvasManager.getInteractionCanvas();
-        let fillPointerDown = false;
+        let isFillPointerDown = false;
         let fillStartX = 0;
         let fillStartY = 0;
 
@@ -121,30 +136,28 @@ const Toolbar = (() => {
             if (activeTool !== 'fill') return;
             event.preventDefault();
 
-            fillPointerDown = true;
+            isFillPointerDown = true;
             fillStartX = event.clientX;
             fillStartY = event.clientY;
         });
 
         interactionCanvas.addEventListener('pointerup', (event) => {
-            if (!fillPointerDown || activeTool !== 'fill') {
-                fillPointerDown = false;
+            if (!isFillPointerDown || activeTool !== 'fill') {
+                isFillPointerDown = false;
                 return;
             }
-            fillPointerDown = false;
+            isFillPointerDown = false;
 
             // Only fill if the pointer didn't move much (it's a tap, not a drag)
             const dx = event.clientX - fillStartX;
             const dy = event.clientY - fillStartY;
             if (Math.sqrt(dx * dx + dy * dy) > 10) return;
 
-            const rect = interactionCanvas.getBoundingClientRect();
-            const cssX = event.clientX - rect.left;
-            const cssY = event.clientY - rect.top;
+            const coords = CanvasManager.getCanvasPixelCoords(event);
 
             FloodFill.executeFloodFillAtPoint(
-                cssX,
-                cssY,
+                coords.x,
+                coords.y,
                 ColorPalette.getCurrentColor()
             );
         });
