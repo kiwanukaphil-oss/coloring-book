@@ -7,3 +7,7 @@ test-results/
 
 # Claude Code auto memory — personal to each developer
 ~/.claude/projects/
+
+# Alignment process guides — not project artifacts
+claude_code_project_setup.md
+codebase_alignment_guide.md
