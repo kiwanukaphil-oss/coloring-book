@@ -14,16 +14,25 @@
     <!-- Image gallery modal -->
     <div id="image-gallery-modal" class="modal hidden">
         <div class="modal-content">
-            <h2 class="modal-title">Pick a Picture!</h2>
-            <div id="gallery-grid" class="gallery-grid"></div>
-            <label class="upload-button" id="upload-button-label">
-                Upload Your Own
-                <input type="file" id="upload-input" accept="image/*" hidden>
-            </label>
-            <label class="upload-button upload-button-reference" id="reference-upload-button-label">
-                Upload Reference Image
-                <input type="file" id="reference-upload-input" accept="image/*" hidden>
-            </label>
+            <div class="gallery-tabs">
+                <button id="tab-templates" class="gallery-tab gallery-tab-active">Pick a Picture!</button>
+                <button id="tab-my-art" class="gallery-tab">My Art</button>
+            </div>
+            <div id="templates-panel" class="gallery-panel">
+                <div id="gallery-grid" class="gallery-grid"></div>
+                <label class="upload-button" id="upload-button-label">
+                    Upload Your Own
+                    <input type="file" id="upload-input" accept="image/*" hidden>
+                </label>
+                <label class="upload-button upload-button-reference" id="reference-upload-button-label">
+                    Upload Reference Image
+                    <input type="file" id="reference-upload-input" accept="image/*" hidden>
+                </label>
+            </div>
+            <div id="my-art-panel" class="gallery-panel hidden">
+                <div id="saved-artwork-grid" class="gallery-grid"></div>
+                <p id="saved-artwork-empty" class="saved-artwork-empty hidden">No saved artwork yet. Start coloring!</p>
+            </div>
             <button id="gallery-close-button" class="gallery-close-button">Close</button>
         </div>
     </div>
@@ -39,6 +48,21 @@
         </div>
     </div>
 
+    <!-- Resume project modal -->
+    <div id="resume-modal" class="modal hidden">
+        <div class="modal-content modal-content-small">
+            <p class="confirm-text">Welcome back!</p>
+            <p class="resume-subtitle">You have unfinished work.</p>
+            <div id="resume-thumbnail-container" class="resume-thumbnail-container">
+                <img id="resume-thumbnail" class="resume-thumbnail" alt="Your last drawing">
+            </div>
+            <div class="confirm-buttons">
+                <button id="resume-yes" class="confirm-button confirm-resume">Keep Going</button>
+                <button id="resume-no" class="confirm-button confirm-fresh">Start Fresh</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main app layout -->
     <div id="app-container">
         <!-- Canvas area -->
@@ -47,6 +71,10 @@
             <canvas id="reference-canvas"></canvas>
             <canvas id="outline-canvas"></canvas>
             <canvas id="interaction-canvas"></canvas>
+            <canvas id="cursor-canvas"></canvas>
+            <div id="loading-spinner" class="loading-spinner hidden">
+                <div class="spinner-ring"></div>
+            </div>
             <div id="reference-panel" class="reference-panel hidden">
                 <div id="reference-panel-handle" class="reference-panel-handle">
                     <span>Reference</span>
@@ -71,6 +99,10 @@
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/></svg>
             <span class="tool-label">Brush</span>
         </button>
+        <button id="tool-eraser" class="tool-button" title="Eraser">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>
+            <span class="tool-label">Eraser</span>
+        </button>
         <div id="brush-size-control" class="brush-size-control hidden">
             <input type="range" id="brush-size-slider" min="4" max="40" value="12" class="brush-size-slider">
             <span id="brush-size-value" class="brush-size-value">12</span>
@@ -78,6 +110,10 @@
         <button id="tool-undo" class="tool-button" title="Undo">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
             <span class="tool-label">Undo</span>
+        </button>
+        <button id="tool-redo" class="tool-button" title="Redo">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+            <span class="tool-label">Redo</span>
         </button>
         <button id="tool-clear" class="tool-button" title="Clear">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
@@ -94,7 +130,13 @@
         <div id="active-color-indicator" class="active-color-indicator" style="background-color: #FF0000;"></div>
     </div>
 
+    <!-- Toast notification -->
+    <div id="toast-container" class="toast-container hidden">
+        <span id="toast-message" class="toast-message"></span>
+    </div>
+
     <script src="js/touch-guard.js"></script>
+    <script src="js/feedback-manager.js"></script>
     <script src="js/canvas-manager.js"></script>
     <script src="js/undo-manager.js"></script>
     <script src="js/color-palette.js"></script>
@@ -102,6 +144,8 @@
     <script src="js/brush-engine.js"></script>
     <script src="js/image-loader.js"></script>
     <script src="js/toolbar.js"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/progress-manager.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

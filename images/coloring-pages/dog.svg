@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple dog outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Head -->
+    <ellipse cx="400" cy="240" rx="100" ry="90" stroke-width="4"/>
+
+    <!-- Left floppy ear -->
+    <path d="M310,220 C280,210 250,240 255,290 C260,330 280,350 310,340 C320,320 315,280 315,260" stroke-width="4"/>
+
+    <!-- Right floppy ear -->
+    <path d="M490,220 C520,210 550,240 545,290 C540,330 520,350 490,340 C480,320 485,280 485,260" stroke-width="4"/>
+
+    <!-- Left eye -->
+    <ellipse cx="365" cy="230" rx="16" ry="18" stroke-width="3.5"/>
+    <!-- Left pupil -->
+    <ellipse cx="365" cy="233" rx="8" ry="10" stroke-width="3"/>
+
+    <!-- Right eye -->
+    <ellipse cx="435" cy="230" rx="16" ry="18" stroke-width="3.5"/>
+    <!-- Right pupil -->
+    <ellipse cx="435" cy="233" rx="8" ry="10" stroke-width="3"/>
+
+    <!-- Nose -->
+    <ellipse cx="400" cy="272" rx="18" ry="14" stroke-width="3"/>
+
+    <!-- Mouth -->
+    <path d="M400,286 L400,300" stroke-width="3"/>
+    <path d="M400,300 C388,315 375,318 365,312" stroke-width="3"/>
+    <path d="M400,300 C412,315 425,318 435,312" stroke-width="3"/>
+
+    <!-- Tongue -->
+    <path d="M395,300 C392,320 398,335 405,335 C412,335 415,320 410,300" stroke-width="3"/>
+
+    <!-- Body -->
+    <path d="M320,320 C290,370 280,430 290,500 C295,540 310,570 330,590" stroke-width="4"/>
+    <path d="M480,320 C510,370 520,430 510,500 C505,540 490,570 470,590" stroke-width="4"/>
+
+    <!-- Belly curve -->
+    <path d="M330,590 C360,620 440,620 470,590" stroke-width="4"/>
+
+    <!-- Chest line -->
+    <path d="M360,380 C380,400 420,400 440,380" stroke-width="3"/>
+
+    <!-- Front left leg -->
+    <path d="M330,520 L310,630 C310,650 325,655 340,650 L350,645" stroke-width="4"/>
+    <!-- Left paw -->
+    <path d="M315,645 C318,653 332,655 338,650" stroke-width="3"/>
+
+    <!-- Front right leg -->
+    <path d="M470,520 L490,630 C490,650 475,655 460,650 L450,645" stroke-width="4"/>
+    <!-- Right paw -->
+    <path d="M485,645 C482,653 468,655 462,650" stroke-width="3"/>
+
+    <!-- Tail (wagging up) -->
+    <path d="M480,380 C520,350 550,310 560,270 C565,250 555,240 540,250 C530,260 535,280 540,290" stroke-width="4"/>
+
+    <!-- Collar -->
+    <path d="M330,330 C360,350 440,350 470,330" stroke-width="4"/>
+    <!-- Collar tag -->
+    <circle cx="400" cy="355" r="10" stroke-width="3"/>
+
+    <!-- Spots -->
+    <ellipse cx="350" cy="460" rx="25" ry="20" stroke-width="3"/>
+    <ellipse cx="460" cy="440" rx="20" ry="15" stroke-width="3"/>
+
+  </g>
+</svg>

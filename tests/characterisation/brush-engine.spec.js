@@ -5,6 +5,12 @@ const { test, expect } = require('@playwright/test');
 test.describe('BrushEngine', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/index.html');
+    // Wait for async init to finish (gallery shown after IndexedDB opens)
+    await page.waitForFunction(() => {
+      const gallery = document.getElementById('image-gallery-modal');
+      return gallery && !gallery.classList.contains('hidden');
+    });
+    await page.evaluate(() => ImageLoader.hideGallery());
   });
 
   test('default brush size is 12', async ({ page }) => {
@@ -91,8 +97,67 @@ test.describe('BrushEngine', () => {
     expect(hasStepsAfter).toBe(true);
   });
 
+  test('eraser stroke paints white pixels on canvas', async ({ page }) => {
+    await page.evaluate(() => ImageLoader.hideGallery());
+
+    // First draw something with the brush
+    await page.click('#tool-brush');
+    const canvas = page.locator('#interaction-canvas');
+    const box = await canvas.boundingBox();
+
+    await page.mouse.move(box.x + 100, box.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 200, box.y + 100, { steps: 5 });
+    await page.mouse.up();
+
+    // Verify non-white pixels exist
+    const nonWhiteAfterBrush = await page.evaluate(() => {
+      const c = CanvasManager.getColoringCanvas();
+      const ctx = CanvasManager.getColoringContext();
+      return CanvasManager.withNativeTransform(ctx, (ct) => {
+        const data = ct.getImageData(0, 0, c.width, c.height).data;
+        let nonWhite = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) {
+            nonWhite++;
+          }
+        }
+        return nonWhite;
+      });
+    });
+    expect(nonWhiteAfterBrush).toBeGreaterThan(0);
+
+    // Now erase over the same area
+    await page.click('#tool-eraser');
+    await page.evaluate(() => BrushEngine.setBrushSize(40));
+
+    await page.mouse.move(box.x + 80, box.y + 100);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 220, box.y + 100, { steps: 10 });
+    await page.mouse.up();
+
+    // Check that most pixels are back to white
+    const nonWhiteAfterEraser = await page.evaluate(() => {
+      const c = CanvasManager.getColoringCanvas();
+      const ctx = CanvasManager.getColoringContext();
+      return CanvasManager.withNativeTransform(ctx, (ct) => {
+        const data = ct.getImageData(0, 0, c.width, c.height).data;
+        let nonWhite = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] !== 255 || data[i + 1] !== 255 || data[i + 2] !== 255) {
+            nonWhite++;
+          }
+        }
+        return nonWhite;
+      });
+    });
+
+    expect(nonWhiteAfterEraser).toBeLessThan(nonWhiteAfterBrush);
+  });
+
   test('brush stroke does not paint on outline pixels (ADR-008)', async ({ page }) => {
-    // Load a coloring page so the outline mask is computed
+    // Re-open gallery and load a coloring page so the outline mask is computed
+    await page.evaluate(() => ImageLoader.showGallery());
     const firstItem = page.locator('.gallery-item').first();
     await expect(firstItem).toBeVisible();
     await firstItem.click();

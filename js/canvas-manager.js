@@ -33,10 +33,12 @@ const CanvasManager = (() => {
     let referenceCanvas = null;
     let outlineCanvas = null;
     let interactionCanvas = null;
+    let cursorCanvas = null;
     let coloringCtx = null;
     let referenceCtx = null;
     let outlineCtx = null;
     let interactionCtx = null;
+    let cursorCtx = null;
 
     // Stores the loaded image dimensions/offset so other
     // modules know where the coloring page sits on the canvas
@@ -83,11 +85,13 @@ const CanvasManager = (() => {
         referenceCanvas = document.getElementById('reference-canvas');
         outlineCanvas = document.getElementById('outline-canvas');
         interactionCanvas = document.getElementById('interaction-canvas');
+        cursorCanvas = document.getElementById('cursor-canvas');
 
         coloringCtx = coloringCanvas.getContext('2d', { willReadFrequently: true });
         referenceCtx = referenceCanvas.getContext('2d', { willReadFrequently: true });
         outlineCtx = outlineCanvas.getContext('2d', { willReadFrequently: true });
         interactionCtx = interactionCanvas.getContext('2d');
+        cursorCtx = cursorCanvas.getContext('2d');
 
         resizeCanvasesToFitContainer();
         fillColoringCanvasWhite();
@@ -111,7 +115,7 @@ const CanvasManager = (() => {
         const canvasWidth = Math.floor(containerWidth * scaleFactor);
         const canvasHeight = Math.floor(containerHeight * scaleFactor);
 
-        [coloringCanvas, referenceCanvas, outlineCanvas, interactionCanvas].forEach((canvas) => {
+        [coloringCanvas, referenceCanvas, outlineCanvas, interactionCanvas, cursorCanvas].forEach((canvas) => {
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
             canvas.style.width = containerWidth + 'px';
@@ -122,6 +126,7 @@ const CanvasManager = (() => {
         referenceCtx.scale(scaleFactor, scaleFactor);
         outlineCtx.scale(scaleFactor, scaleFactor);
         interactionCtx.scale(scaleFactor, scaleFactor);
+        cursorCtx.scale(scaleFactor, scaleFactor);
     }
 
     function fillColoringCanvasWhite() {
@@ -396,6 +401,8 @@ const CanvasManager = (() => {
         getOutlineContext: () => outlineCtx,
         getInteractionCanvas: () => interactionCanvas,
         getInteractionContext: () => interactionCtx,
+        getCursorCanvas: () => cursorCanvas,
+        getCursorContext: () => cursorCtx,
         getOutlineMask: () => outlineMask,
         getImageRegion: () => imageRegion,
         getContainerElement: () => container

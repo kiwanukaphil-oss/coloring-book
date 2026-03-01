@@ -94,8 +94,27 @@ const ColorPalette = (() => {
         return currentColor;
     }
 
+    // Programmatically sets the active color, highlighting the
+    // matching swatch if found. Used by ProgressManager to
+    // restore the color from a saved project.
+    function setCurrentColor(hex) {
+        const upperHex = hex.toUpperCase();
+        const index = KID_FRIENDLY_COLORS.indexOf(upperHex);
+        if (index !== -1) {
+            selectColor(upperHex, index);
+        } else {
+            currentColor = upperHex;
+            swatchElements.forEach((el) => el.classList.remove('selected'));
+            const indicator = document.getElementById('active-color-indicator');
+            if (indicator) {
+                indicator.style.backgroundColor = upperHex;
+            }
+        }
+    }
+
     return {
         initialize,
-        getCurrentColor
+        getCurrentColor,
+        setCurrentColor
     };
 })();

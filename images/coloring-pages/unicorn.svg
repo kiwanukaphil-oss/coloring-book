@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple unicorn outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Head -->
+    <path d="M480,280 C500,260 510,230 505,200 C500,180 480,170 460,175 C440,180 420,200 410,230 C400,250 400,270 410,290 C420,310 450,320 480,310 C490,300 490,290 480,280" stroke-width="4"/>
+
+    <!-- Horn -->
+    <path d="M475,178 L490,110 L505,178" stroke-width="4"/>
+    <!-- Horn spiral lines -->
+    <line x1="480" y1="165" x2="500" y2="165" stroke-width="3"/>
+    <line x1="482" y1="145" x2="498" y2="145" stroke-width="3"/>
+    <line x1="485" y1="128" x2="495" y2="128" stroke-width="3"/>
+
+    <!-- Eye -->
+    <ellipse cx="455" cy="240" rx="12" ry="14" stroke-width="3.5"/>
+    <!-- Pupil -->
+    <ellipse cx="455" cy="243" rx="6" ry="8" stroke-width="3"/>
+    <!-- Eyelash -->
+    <path d="M447,228 C445,222 448,220 452,224" stroke-width="2.5"/>
+    <path d="M455,226 C455,220 458,218 460,222" stroke-width="2.5"/>
+
+    <!-- Nostril -->
+    <ellipse cx="425" cy="275" rx="5" ry="6" stroke-width="3"/>
+
+    <!-- Mouth -->
+    <path d="M415,290 C420,298 430,300 440,296" stroke-width="3"/>
+
+    <!-- Ear -->
+    <path d="M485,195 L500,165 L475,185" stroke-width="3.5"/>
+
+    <!-- Mane on head -->
+    <path d="M470,185 C460,175 445,180 440,195 C435,210 440,225 450,220" stroke-width="3"/>
+    <path d="M455,195 C445,188 430,195 428,210 C426,225 435,240 445,235" stroke-width="3"/>
+
+    <!-- Neck -->
+    <path d="M440,310 C420,340 400,370 390,400" stroke-width="4"/>
+    <path d="M480,310 C500,330 510,360 510,390" stroke-width="4"/>
+
+    <!-- Mane along neck -->
+    <path d="M450,310 C440,325 425,330 430,345 C435,355 445,350 440,365 C435,380 420,385 425,400" stroke-width="3"/>
+
+    <!-- Body -->
+    <path d="M390,400 C360,420 330,460 320,500 C310,540 320,570 340,590" stroke-width="4"/>
+    <path d="M510,390 C540,420 560,460 560,500 C560,540 550,570 530,590" stroke-width="4"/>
+
+    <!-- Belly -->
+    <path d="M350,560 C380,580 470,580 520,560" stroke-width="3"/>
+
+    <!-- Front left leg -->
+    <path d="M370,530 L355,640 C355,655 365,660 378,655" stroke-width="4"/>
+    <!-- Front left hoof -->
+    <path d="M350,648 L355,660 L380,660 L383,648" stroke-width="3.5"/>
+
+    <!-- Front right leg -->
+    <path d="M440,540 L435,640 C435,655 445,660 458,655" stroke-width="4"/>
+    <!-- Front right hoof -->
+    <path d="M430,648 L435,660 L460,660 L463,648" stroke-width="3.5"/>
+
+    <!-- Back left leg -->
+    <path d="M350,580 L340,650 C340,665 350,670 363,665" stroke-width="4"/>
+    <!-- Back left hoof -->
+    <path d="M335,658 L340,670 L365,670 L368,658" stroke-width="3.5"/>
+
+    <!-- Back right leg -->
+    <path d="M520,580 L530,650 C530,665 520,670 507,665" stroke-width="4"/>
+    <!-- Back right hoof -->
+    <path d="M502,658 L507,670 L532,670 L535,658" stroke-width="3.5"/>
+
+    <!-- Tail -->
+    <path d="M530,520 C560,510 580,490 590,470 C595,455 585,445 575,455 C565,470 570,490 560,510 C555,520 545,530 535,535" stroke-width="4"/>
+    <path d="M575,455 C580,440 575,425 565,435 C555,448 560,465 555,480" stroke-width="3"/>
+
+    <!-- Stars around unicorn -->
+    <path d="M250,180 L253,190 L263,190 L255,196 L258,206 L250,200 L242,206 L245,196 L237,190 L247,190 Z" stroke-width="2.5"/>
+    <path d="M620,250 L623,260 L633,260 L625,266 L628,276 L620,270 L612,276 L615,266 L607,260 L617,260 Z" stroke-width="2.5"/>
+    <path d="M300,350 L302,357 L309,357 L303,362 L306,369 L300,364 L294,369 L297,362 L291,357 L298,357 Z" stroke-width="2.5"/>
+
+    <!-- Ground -->
+    <path d="M220,670 C300,665 400,670 480,665 C540,668 580,670 650,665" stroke-width="3"/>
+
+  </g>
+</svg>

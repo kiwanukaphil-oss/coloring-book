@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple flower outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Stem -->
+    <path d="M400,380 C398,450 395,520 400,620 C402,650 400,680 400,700" stroke-width="4"/>
+
+    <!-- Left leaf -->
+    <path d="M398,500 C360,480 320,470 290,480 C270,490 270,510 290,520 C320,530 360,520 398,510" stroke-width="4"/>
+    <!-- Left leaf vein -->
+    <path d="M395,505 C370,498 340,495 310,500" stroke-width="3"/>
+
+    <!-- Right leaf -->
+    <path d="M402,560 C440,540 480,530 510,540 C530,550 530,570 510,580 C480,590 440,580 402,570" stroke-width="4"/>
+    <!-- Right leaf vein -->
+    <path d="M405,565 C430,558 460,555 490,560" stroke-width="3"/>
+
+    <!-- Flower center -->
+    <circle cx="400" cy="280" r="40" stroke-width="4"/>
+    <!-- Inner center pattern -->
+    <circle cx="400" cy="280" r="22" stroke-width="3"/>
+    <!-- Center dots -->
+    <circle cx="390" cy="272" r="4" stroke-width="2.5"/>
+    <circle cx="410" cy="272" r="4" stroke-width="2.5"/>
+    <circle cx="400" cy="290" r="4" stroke-width="2.5"/>
+
+    <!-- Petal top -->
+    <path d="M380,242 C370,200 380,160 400,140 C420,160 430,200 420,242" stroke-width="4"/>
+
+    <!-- Petal top-right -->
+    <path d="M432,256 C460,230 490,220 510,235 C510,260 490,280 460,290 C445,285 438,272 432,256" stroke-width="4"/>
+
+    <!-- Petal right -->
+    <path d="M438,296 C470,300 500,310 510,335 C500,355 470,360 440,348 C438,335 438,315 438,296" stroke-width="4"/>
+
+    <!-- Petal bottom-right -->
+    <path d="M425,320 C440,350 440,380 425,400 C405,395 395,375 398,345 C405,335 415,325 425,320" stroke-width="4"/>
+
+    <!-- Petal bottom-left -->
+    <path d="M375,320 C360,350 360,380 375,400 C395,395 405,375 402,345 C395,335 385,325 375,320" stroke-width="4"/>
+
+    <!-- Petal left -->
+    <path d="M362,296 C330,300 300,310 290,335 C300,355 330,360 360,348 C362,335 362,315 362,296" stroke-width="4"/>
+
+    <!-- Petal top-left -->
+    <path d="M368,256 C340,230 310,220 290,235 C290,260 310,280 340,290 C355,285 362,272 368,256" stroke-width="4"/>
+
+    <!-- Ground line -->
+    <path d="M200,700 C280,695 360,700 400,700 C440,700 520,695 600,700" stroke-width="3"/>
+
+    <!-- Small grass tufts -->
+    <path d="M250,700 L245,680 L255,690 L260,670 L265,690 L270,680 L275,700" stroke-width="2.5"/>
+    <path d="M520,700 L515,682 L525,692 L530,674 L535,692 L540,682 L545,700" stroke-width="2.5"/>
+
+    <!-- Ladybug on leaf -->
+    <ellipse cx="320" cy="512" rx="10" ry="8" stroke-width="2.5"/>
+    <line x1="320" y1="504" x2="320" y2="520" stroke-width="2"/>
+    <circle cx="316" cy="510" r="2" stroke-width="2"/>
+    <circle cx="324" cy="514" r="2" stroke-width="2"/>
+
+  </g>
+</svg>

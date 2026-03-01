@@ -62,6 +62,15 @@ html, body {
     touch-action: none;
 }
 
+#cursor-canvas {
+    z-index: 5;
+    pointer-events: none;
+}
+
+#interaction-canvas.brush-active {
+    cursor: none;
+}
+
 .reference-panel {
     position: absolute;
     top: 12px;
@@ -75,7 +84,7 @@ html, body {
     border: 2px solid #1E88E5;
     border-radius: 12px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
-    z-index: 5;
+    z-index: 6;
     overflow: hidden;
     touch-action: none;
 }
@@ -172,6 +181,13 @@ html, body {
     border: 4px solid #ffffff;
     box-shadow: 0 0 0 3px #333, 0 2px 8px rgba(0, 0, 0, 0.3);
     transform: scale(1.15);
+    animation: swatch-bounce 0.3s ease;
+}
+
+@keyframes swatch-bounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1.15); }
 }
 
 /* --- Toolbar (bottom bar) --- */
@@ -286,6 +302,18 @@ html, body {
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: modal-enter 0.25s ease-out;
+}
+
+@keyframes modal-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 .modal-content-small {
@@ -298,6 +326,120 @@ html, body {
     color: #FF6F00;
     text-align: center;
     margin-bottom: 16px;
+}
+
+/* --- Gallery Tabs --- */
+.gallery-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 16px;
+    border-bottom: 3px solid #eee;
+}
+
+.gallery-tab {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: none;
+    font-size: 18px;
+    font-weight: 700;
+    color: #999;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -3px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.gallery-tab:hover {
+    color: #666;
+}
+
+.gallery-tab-active {
+    color: #FF6F00;
+    border-bottom-color: #FF6F00;
+}
+
+.gallery-panel.hidden {
+    display: none;
+}
+
+/* --- Saved Artwork --- */
+.saved-artwork-empty {
+    text-align: center;
+    color: #999;
+    font-size: 16px;
+    padding: 40px 16px;
+}
+
+.saved-artwork-empty.hidden {
+    display: none;
+}
+
+.saved-artwork-card {
+    position: relative;
+    aspect-ratio: 1;
+    border: 3px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+    background-color: #fafafa;
+    animation: card-enter 0.3s ease-out;
+}
+
+.saved-artwork-card:hover {
+    border-color: #FF6F00;
+    transform: scale(1.03);
+}
+
+.saved-artwork-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.saved-artwork-delete {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.saved-artwork-card:hover .saved-artwork-delete {
+    opacity: 1;
+}
+
+.saved-artwork-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.saved-artwork-badge-progress {
+    background-color: #FF6F00;
+}
+
+.saved-artwork-badge-completed {
+    background-color: #4CAF50;
 }
 
 /* --- Gallery Grid --- */
@@ -316,6 +458,7 @@ html, body {
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.1s ease;
     background-color: #fafafa;
+    animation: card-enter 0.3s ease-out;
 }
 
 .gallery-item.hidden {
@@ -415,4 +558,119 @@ html, body {
 .confirm-no {
     background-color: #4CAF50;
     color: #ffffff;
+}
+
+/* --- Resume Modal --- */
+.resume-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 16px;
+}
+
+.resume-thumbnail-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.resume-thumbnail {
+    width: 160px;
+    height: 160px;
+    object-fit: contain;
+    border: 3px solid #ddd;
+    border-radius: 12px;
+    background-color: #fafafa;
+}
+
+.confirm-resume {
+    background-color: #4CAF50;
+    color: #ffffff;
+}
+
+.confirm-fresh {
+    background-color: #78909C;
+    color: #ffffff;
+}
+
+/* --- Loading Spinner --- */
+.loading-spinner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.6);
+    z-index: 10;
+}
+
+.loading-spinner.hidden {
+    display: none;
+}
+
+.spinner-ring {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #e0e0e0;
+    border-top-color: #FF6F00;
+    border-radius: 50%;
+    animation: spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes spinner-rotate {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Toast Notification --- */
+.toast-container {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+    animation: toast-enter 0.25s ease-out;
+}
+
+.toast-container.hidden {
+    display: none;
+}
+
+.toast-container.toast-exit {
+    animation: toast-exit 0.3s ease-in forwards;
+}
+
+.toast-message {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #37474F;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    white-space: nowrap;
+}
+
+@keyframes toast-enter {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes toast-exit {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to { opacity: 0; transform: translateX(-50%) translateY(12px); }
+}
+
+/* --- Card Entrance Animation --- */
+@keyframes card-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }

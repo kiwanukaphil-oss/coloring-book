@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple car outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Car body lower -->
+    <path d="M140,440 L140,500 L660,500 L660,440 C660,420 650,410 630,410 L170,410 C150,410 140,420 140,440" stroke-width="4"/>
+
+    <!-- Car body upper (cabin) -->
+    <path d="M230,410 L270,300 C275,288 285,280 300,280 L500,280 C515,280 525,288 530,300 L570,410" stroke-width="4"/>
+
+    <!-- Windshield -->
+    <path d="M280,405 L310,305 C312,298 318,294 325,294 L390,294 L390,405" stroke-width="3.5"/>
+
+    <!-- Rear window -->
+    <path d="M410,294 L475,294 C482,294 488,298 490,305 L520,405" stroke-width="3.5"/>
+
+    <!-- Divider between windows -->
+    <line x1="390" y1="294" x2="410" y2="294" stroke-width="4"/>
+    <line x1="390" y1="294" x2="390" y2="405" stroke-width="3"/>
+
+    <!-- Front bumper -->
+    <path d="M140,470 L110,470 C100,470 95,475 95,485 L95,500 L140,500" stroke-width="4"/>
+
+    <!-- Rear bumper -->
+    <path d="M660,470 L690,470 C700,470 705,475 705,485 L705,500 L660,500" stroke-width="4"/>
+
+    <!-- Front headlight -->
+    <path d="M140,435 L120,435 C115,435 112,438 112,443 L112,460 C112,465 115,468 120,468 L140,468" stroke-width="3.5"/>
+
+    <!-- Rear taillight -->
+    <path d="M660,435 L680,435 C685,435 688,438 688,443 L688,460 C688,465 685,468 680,468 L660,468" stroke-width="3.5"/>
+
+    <!-- Front wheel well -->
+    <path d="M180,500 C180,500 190,470 240,470 C290,470 300,500 300,500" stroke-width="4"/>
+
+    <!-- Front wheel -->
+    <circle cx="240" cy="510" r="50" stroke-width="4"/>
+    <!-- Front wheel inner -->
+    <circle cx="240" cy="510" r="30" stroke-width="3.5"/>
+    <!-- Front hubcap -->
+    <circle cx="240" cy="510" r="10" stroke-width="3"/>
+    <!-- Front wheel spokes -->
+    <line x1="240" y1="480" x2="240" y2="500" stroke-width="3"/>
+    <line x1="240" y1="520" x2="240" y2="540" stroke-width="3"/>
+    <line x1="210" y1="510" x2="230" y2="510" stroke-width="3"/>
+    <line x1="250" y1="510" x2="270" y2="510" stroke-width="3"/>
+
+    <!-- Rear wheel well -->
+    <path d="M500,500 C500,500 510,470 560,470 C610,470 620,500 620,500" stroke-width="4"/>
+
+    <!-- Rear wheel -->
+    <circle cx="560" cy="510" r="50" stroke-width="4"/>
+    <!-- Rear wheel inner -->
+    <circle cx="560" cy="510" r="30" stroke-width="3.5"/>
+    <!-- Rear hubcap -->
+    <circle cx="560" cy="510" r="10" stroke-width="3"/>
+    <!-- Rear wheel spokes -->
+    <line x1="560" y1="480" x2="560" y2="500" stroke-width="3"/>
+    <line x1="560" y1="520" x2="560" y2="540" stroke-width="3"/>
+    <line x1="530" y1="510" x2="550" y2="510" stroke-width="3"/>
+    <line x1="570" y1="510" x2="590" y2="510" stroke-width="3"/>
+
+    <!-- Door handle -->
+    <line x1="340" y1="430" x2="365" y2="430" stroke-width="3"/>
+
+    <!-- Side mirror left -->
+    <path d="M230,360 L215,355 C210,353 208,356 210,360 L215,368 L230,370" stroke-width="3"/>
+
+    <!-- Door line -->
+    <line x1="400" y1="410" x2="400" y2="500" stroke-width="3"/>
+
+    <!-- Ground line -->
+    <line x1="60" y1="560" x2="740" y2="560" stroke-width="3"/>
+
+    <!-- Road dashes -->
+    <line x1="100" y1="610" x2="160" y2="610" stroke-width="3"/>
+    <line x1="240" y1="610" x2="300" y2="610" stroke-width="3"/>
+    <line x1="380" y1="610" x2="440" y2="610" stroke-width="3"/>
+    <line x1="520" y1="610" x2="580" y2="610" stroke-width="3"/>
+    <line x1="660" y1="610" x2="720" y2="610" stroke-width="3"/>
+
+    <!-- Exhaust pipe -->
+    <path d="M130,495 L115,495 L110,500 L115,505 L130,505" stroke-width="3"/>
+
+    <!-- Exhaust cloud -->
+    <circle cx="85" cy="490" r="10" stroke-width="2.5"/>
+    <circle cx="65" cy="480" r="8" stroke-width="2.5"/>
+    <circle cx="50" cy="472" r="6" stroke-width="2.5"/>
+
+  </g>
+</svg>

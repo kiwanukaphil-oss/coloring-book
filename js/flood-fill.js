@@ -99,6 +99,8 @@ const FloodFill = (() => {
         CanvasManager.withNativeTransform(coloringCtx, (ctx) => {
             ctx.putImageData(coloringImageData, 0, 0);
         });
+
+        ProgressManager.scheduleAutoSave();
     }
 
     // Scanline stack-based flood fill: processes horizontal spans

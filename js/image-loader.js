@@ -2,8 +2,8 @@
  * Image Loader
  *
  * Responsible for: Managing the coloring page gallery (pre-loaded thumbnails and device
- *   uploads), the draggable/resizable reference image panel, and loading images onto
- *   the canvas.
+ *   uploads), the saved artwork gallery ("My Art" tab), the draggable/resizable
+ *   reference image panel, and loading images onto the canvas.
  * NOT responsible for: Canvas rendering or image processing — CanvasManager handles
  *   the actual drawing, white-pixel removal, and layer management.
  *
@@ -12,14 +12,19 @@
  *   - loadColoringPage: Loads a selected image onto the outline canvas, resets undo
  *   - setupUploadHandler: Wires the file input for user-uploaded coloring pages
  *   - setupReferenceUploadHandler: Wires the file input for reference guide images
+ *   - setupGalleryTabs: Wires tab switching between Templates and My Art panels
+ *   - populateSavedArtwork: Loads saved projects from IndexedDB and builds artwork cards
  *   - handleReferencePanelPointerMove: Handles drag and resize of the reference panel
  *   - showReferencePanel / hideReferencePanel: Controls reference panel visibility
  *
- * Dependencies: CanvasManager, UndoManager
+ * Dependencies: CanvasManager, UndoManager, StorageManager, ProgressManager,
+ *   FeedbackManager
  *
  * Notes: The reference panel uses pointer capture for reliable drag/resize across
  *   the entire viewport. Panel position is clamped to the canvas container bounds.
  *   Gallery cards auto-hide if their thumbnail image fails to load (file not found).
+ *   Saved artwork thumbnails are loaded from IndexedDB each time the My Art tab
+ *   becomes visible, ensuring freshness.
  */
 
 const ImageLoader = (() => {
@@ -27,10 +32,23 @@ const ImageLoader = (() => {
     // Supports both PNG and SVG formats. Cards auto-hide if file is missing.
     const PRELOADED_COLORING_PAGES = [
         { id: 'cat', title: 'Cat', src: 'images/coloring-pages/cat.svg' },
+        { id: 'dog', title: 'Dog', src: 'images/coloring-pages/dog.svg' },
+        { id: 'butterfly', title: 'Butterfly', src: 'images/coloring-pages/butterfly.svg' },
+        { id: 'fish', title: 'Fish', src: 'images/coloring-pages/fish.svg' },
+        { id: 'rocket', title: 'Rocket', src: 'images/coloring-pages/rocket.svg' },
+        { id: 'flower', title: 'Flower', src: 'images/coloring-pages/flower.svg' },
+        { id: 'unicorn', title: 'Unicorn', src: 'images/coloring-pages/unicorn.svg' },
+        { id: 'car', title: 'Car', src: 'images/coloring-pages/car.svg' },
     ];
 
     let galleryModal = null;
     let galleryGrid = null;
+    let tabTemplates = null;
+    let tabMyArt = null;
+    let templatesPanel = null;
+    let myArtPanel = null;
+    let savedArtworkGrid = null;
+    let savedArtworkEmpty = null;
     let referencePanel = null;
     let referencePanelHandle = null;
     let referencePanelClose = null;
@@ -55,6 +73,12 @@ const ImageLoader = (() => {
     function initialize() {
         galleryModal = document.getElementById('image-gallery-modal');
         galleryGrid = document.getElementById('gallery-grid');
+        tabTemplates = document.getElementById('tab-templates');
+        tabMyArt = document.getElementById('tab-my-art');
+        templatesPanel = document.getElementById('templates-panel');
+        myArtPanel = document.getElementById('my-art-panel');
+        savedArtworkGrid = document.getElementById('saved-artwork-grid');
+        savedArtworkEmpty = document.getElementById('saved-artwork-empty');
         referencePanel = document.getElementById('reference-panel');
         referencePanelHandle = document.getElementById('reference-panel-handle');
         referencePanelClose = document.getElementById('reference-panel-close');
@@ -69,6 +93,7 @@ const ImageLoader = (() => {
         setupUploadHandler();
         setupReferenceUploadHandler();
         setupReferencePanelInteractions();
+        setupGalleryTabs();
         setupCloseHandler();
     }
 
@@ -286,6 +311,158 @@ const ImageLoader = (() => {
         referencePreviewImage.classList.add('is-empty');
     }
 
+    // Wires the Templates / My Art tab buttons. Switching to
+    // My Art triggers a fresh load from IndexedDB so newly
+    // saved projects appear immediately.
+    function setupGalleryTabs() {
+        tabTemplates.addEventListener('pointerdown', () => {
+            switchToTemplatesTab();
+        });
+
+        tabMyArt.addEventListener('pointerdown', () => {
+            switchToMyArtTab();
+        });
+    }
+
+    function switchToTemplatesTab() {
+        tabTemplates.classList.add('gallery-tab-active');
+        tabMyArt.classList.remove('gallery-tab-active');
+        templatesPanel.classList.remove('hidden');
+        myArtPanel.classList.add('hidden');
+    }
+
+    function switchToMyArtTab() {
+        tabMyArt.classList.add('gallery-tab-active');
+        tabTemplates.classList.remove('gallery-tab-active');
+        myArtPanel.classList.remove('hidden');
+        templatesPanel.classList.add('hidden');
+        populateSavedArtwork();
+    }
+
+    // Loads all projects from IndexedDB and renders them as
+    // thumbnail cards in the My Art grid. Revokes any previous
+    // object URLs to prevent memory leaks, then creates fresh
+    // cards sorted by most recently updated.
+    function populateSavedArtwork() {
+        if (!StorageManager.isAvailable()) {
+            showSavedArtworkEmptyState();
+            return;
+        }
+
+        StorageManager.listProjects().then((projects) => {
+            revokeSavedArtworkUrls();
+            savedArtworkGrid.innerHTML = '';
+
+            if (projects.length === 0) {
+                showSavedArtworkEmptyState();
+                return;
+            }
+
+            savedArtworkEmpty.classList.add('hidden');
+
+            projects.forEach((project) => {
+                const card = buildSavedArtworkCard(project);
+                savedArtworkGrid.appendChild(card);
+            });
+        });
+    }
+
+    // Builds a single saved artwork card with thumbnail image,
+    // status badge, and delete button. Tapping the card resumes
+    // that project; tapping delete removes it from IndexedDB.
+    function buildSavedArtworkCard(project) {
+        const card = document.createElement('div');
+        card.className = 'saved-artwork-card';
+        card.dataset.projectId = project.id;
+
+        // Thumbnail image from saved blob
+        const img = document.createElement('img');
+        if (project.thumbnailBlob) {
+            const thumbUrl = URL.createObjectURL(project.thumbnailBlob);
+            img.src = thumbUrl;
+            img.dataset.objectUrl = thumbUrl;
+        }
+        img.alt = 'Saved artwork';
+        card.appendChild(img);
+
+        // Status badge (in-progress or completed)
+        const badge = document.createElement('span');
+        if (project.status === 'in-progress') {
+            badge.className = 'saved-artwork-badge saved-artwork-badge-progress';
+            badge.textContent = 'In Progress';
+        } else {
+            badge.className = 'saved-artwork-badge saved-artwork-badge-completed';
+            badge.textContent = 'Done';
+        }
+        card.appendChild(badge);
+
+        // Delete button (ADR-005: named handler)
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'saved-artwork-delete';
+        deleteBtn.textContent = '\u00D7';
+        deleteBtn.title = 'Delete artwork';
+        function handleDeleteArtwork(event) {
+            event.stopPropagation();
+            deleteProject(project.id, card);
+        }
+        deleteBtn.addEventListener('pointerdown', handleDeleteArtwork);
+        card.appendChild(deleteBtn);
+
+        // Tap card to resume the project (ADR-005: named handler)
+        function handleResumeArtwork() {
+            resumeSavedProject(project);
+        }
+        card.addEventListener('pointerdown', handleResumeArtwork);
+
+        return card;
+    }
+
+    // Deletes a project from IndexedDB and removes its card
+    // from the grid. If the deleted project was the current
+    // in-progress project, clears ProgressManager tracking.
+    // Shows the empty state if no projects remain.
+    function deleteProject(projectId, cardElement) {
+        // Revoke the object URL for this card's thumbnail
+        const img = cardElement.querySelector('img');
+        if (img && img.dataset.objectUrl) {
+            URL.revokeObjectURL(img.dataset.objectUrl);
+        }
+
+        cardElement.remove();
+
+        StorageManager.deleteProject(projectId);
+
+        if (ProgressManager.getCurrentProjectId() === projectId) {
+            ProgressManager.clearCurrentProject();
+        }
+
+        // Show empty state if no cards remain
+        if (savedArtworkGrid.children.length === 0) {
+            showSavedArtworkEmptyState();
+        }
+    }
+
+    // Resumes a saved project by hiding the gallery and
+    // delegating to ProgressManager.resumeProject().
+    function resumeSavedProject(project) {
+        hideGallery();
+        ProgressManager.resumeProject(project);
+    }
+
+    function showSavedArtworkEmptyState() {
+        savedArtworkEmpty.classList.remove('hidden');
+    }
+
+    // Revokes all object URLs from saved artwork thumbnails
+    // to prevent memory leaks. Called before repopulating
+    // the grid with fresh data.
+    function revokeSavedArtworkUrls() {
+        const images = savedArtworkGrid.querySelectorAll('img[data-object-url]');
+        images.forEach((img) => {
+            URL.revokeObjectURL(img.dataset.objectUrl);
+        });
+    }
+
     function setupCloseHandler() {
         const closeButton = document.getElementById('gallery-close-button');
         closeButton.addEventListener('pointerdown', hideGallery);
@@ -307,20 +484,27 @@ const ImageLoader = (() => {
         CanvasManager.clearReferenceCanvas();
         hideReferencePanel();
 
+        FeedbackManager.showLoadingSpinner();
         CanvasManager.loadOutlineImage(imageSrc)
             .then(() => {
+                FeedbackManager.hideLoadingSpinner();
                 UndoManager.saveSnapshot();
+                ProgressManager.startNewProject(imageSrc);
             })
             .catch((error) => {
+                FeedbackManager.hideLoadingSpinner();
+                FeedbackManager.showToast('Oops! Could not load that picture.');
                 console.warn('Failed to load coloring page:', error);
             });
     }
 
     function showGallery() {
+        switchToTemplatesTab();
         galleryModal.classList.remove('hidden');
     }
 
     function hideGallery() {
+        revokeSavedArtworkUrls();
         galleryModal.classList.add('hidden');
     }
 

@@ -3,6 +3,7 @@
  *
  * Responsible for: Handling free-hand painting via Pointer Events, drawing smooth
  *   strokes onto the coloring canvas using coalesced events and round line caps.
+ *   Also handles eraser strokes (identical to brush but hardcoded to white).
  * NOT responsible for: Tool selection (Toolbar), color choice (ColorPalette),
  *   or managing undo history beyond triggering a snapshot at stroke start.
  *
@@ -10,7 +11,10 @@
  *   - handlePointerDown: Starts a stroke, saves undo snapshot, draws initial dot
  *   - handlePointerMove: Draws line segments using coalesced events for smoothness
  *   - handlePointerUp: Ends the stroke and releases pointer capture
+ *   - getStrokeColor: Returns the eraser color (white) or the palette color
  *   - restoreOutlinePixels: Resets outline pixels to white after each draw (ADR-008)
+ *   - updateCursorPreview: Draws a semi-transparent circle on the cursor canvas
+ *   - clearCursorPreview: Clears the cursor canvas when pointer leaves
  *   - setBrushSize / getBrushSize: Controls the stroke width
  *
  * Dependencies: CanvasManager, Toolbar, UndoManager, ColorPalette
@@ -21,6 +25,8 @@
  */
 
 const BrushEngine = (() => {
+    const ERASER_COLOR = '#FFFFFF';
+
     let isDrawing = false;
     let brushSize = 12;
     let lastX = 0;
@@ -34,10 +40,39 @@ const BrushEngine = (() => {
         interactionCanvas.addEventListener('pointerup', handlePointerUp);
         interactionCanvas.addEventListener('pointercancel', handlePointerUp);
         interactionCanvas.addEventListener('pointerleave', handlePointerUp);
+
+        // Cursor preview follows the pointer whenever the brush tool is active
+        interactionCanvas.addEventListener('pointermove', updateCursorPreview);
+        interactionCanvas.addEventListener('pointerleave', clearCursorPreview);
+    }
+
+    // Returns true when the active tool uses stroke-based drawing
+    // (brush or eraser). Both share the same pointer handling.
+    function isStrokeTool() {
+        const tool = Toolbar.getActiveTool();
+        return tool === 'brush' || tool === 'eraser';
+    }
+
+    // Returns white for the eraser, or the palette color for
+    // the brush. Centralizes the color decision so both
+    // handlePointerDown and handlePointerMove stay DRY.
+    function getStrokeColor() {
+        return Toolbar.getActiveTool() === 'eraser'
+            ? ERASER_COLOR
+            : ColorPalette.getCurrentColor();
+    }
+
+    // Returns the brush size scaled to native canvas pixel
+    // resolution. The slider value is in CSS pixels, but
+    // withNativeTransform draws at identity transform, so
+    // we multiply by the DPI scale factor to keep the visual
+    // stroke size matching the slider value on high-DPI screens.
+    function getScaledBrushSize() {
+        return brushSize * CanvasManager.getScaleFactor();
     }
 
     function handlePointerDown(event) {
-        if (Toolbar.getActiveTool() !== 'brush') return;
+        if (!isStrokeTool()) return;
 
         event.preventDefault();
         event.target.setPointerCapture?.(event.pointerId);
@@ -50,18 +85,20 @@ const BrushEngine = (() => {
         lastX = coords.x;
         lastY = coords.y;
 
+        const scaledSize = getScaledBrushSize();
+
         // Draw a dot at the starting point for single taps
         CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
-            ctx.fillStyle = ColorPalette.getCurrentColor();
+            ctx.fillStyle = getStrokeColor();
             ctx.beginPath();
-            ctx.arc(coords.x, coords.y, brushSize / 2, 0, Math.PI * 2);
+            ctx.arc(coords.x, coords.y, scaledSize / 2, 0, Math.PI * 2);
             ctx.fill();
 
             // Restore outline pixels that the dot may have covered (ADR-008)
-            const halfBrush = brushSize / 2 + 2;
+            const halfBrush = scaledSize / 2 + 2;
             restoreOutlinePixels(ctx,
                 coords.x - halfBrush, coords.y - halfBrush,
-                brushSize + 4, brushSize + 4
+                scaledSize + 4, scaledSize + 4
             );
         });
     }
@@ -71,13 +108,15 @@ const BrushEngine = (() => {
     // positions between animation frames, producing smoother
     // lines on fast-moving finger strokes.
     function handlePointerMove(event) {
-        if (!isDrawing || Toolbar.getActiveTool() !== 'brush') return;
+        if (!isDrawing || !isStrokeTool()) return;
 
         event.preventDefault();
 
+        const scaledSize = getScaledBrushSize();
+
         CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
-            ctx.strokeStyle = ColorPalette.getCurrentColor();
-            ctx.lineWidth = brushSize;
+            ctx.strokeStyle = getStrokeColor();
+            ctx.lineWidth = scaledSize;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
@@ -110,11 +149,11 @@ const BrushEngine = (() => {
             }
 
             // Restore outline pixels in the affected bounding box (ADR-008)
-            const halfBrush = brushSize / 2 + 2;
+            const halfBrush = scaledSize / 2 + 2;
             restoreOutlinePixels(ctx,
                 minX - halfBrush, minY - halfBrush,
-                (maxX - minX) + brushSize + 4,
-                (maxY - minY) + brushSize + 4
+                (maxX - minX) + scaledSize + 4,
+                (maxY - minY) + scaledSize + 4
             );
         });
     }
@@ -165,10 +204,57 @@ const BrushEngine = (() => {
         }
     }
 
+    // Draws a semi-transparent circle on the cursor canvas showing
+    // the brush size and color at the current pointer position.
+    // Hides the default CSS cursor when active. Only runs when the
+    // brush tool is selected. Skips during active drawing to avoid
+    // visual clutter during fast strokes.
+    // Shows a circular cursor preview for brush and eraser tools.
+    // The eraser shows a gray outline (since white on white canvas
+    // would be invisible), while the brush shows the selected color.
+    function updateCursorPreview(event) {
+        const interactionCanvas = CanvasManager.getInteractionCanvas();
+
+        if (!isStrokeTool()) {
+            interactionCanvas.classList.remove('brush-active');
+            clearCursorPreview();
+            return;
+        }
+
+        interactionCanvas.classList.add('brush-active');
+
+        const cursorCanvas = CanvasManager.getCursorCanvas();
+        const cursorCtx = CanvasManager.getCursorContext();
+        const coords = CanvasManager.getCanvasPixelCoords(event);
+        const isEraser = Toolbar.getActiveTool() === 'eraser';
+
+        const scaledSize = getScaledBrushSize();
+
+        CanvasManager.withNativeTransform(cursorCtx, (ctx) => {
+            ctx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+            ctx.beginPath();
+            ctx.arc(coords.x, coords.y, scaledSize / 2, 0, Math.PI * 2);
+            ctx.strokeStyle = isEraser ? '#999999' : ColorPalette.getCurrentColor();
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.5;
+            ctx.stroke();
+        });
+    }
+
+    function clearCursorPreview() {
+        const cursorCanvas = CanvasManager.getCursorCanvas();
+        if (!cursorCanvas) return;
+        const cursorCtx = CanvasManager.getCursorContext();
+        CanvasManager.withNativeTransform(cursorCtx, (ctx) => {
+            ctx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
+        });
+    }
+
     function handlePointerUp(event) {
         if (!isDrawing) return;
         event.target.releasePointerCapture?.(event.pointerId);
         isDrawing = false;
+        ProgressManager.scheduleAutoSave();
     }
 
     function setBrushSize(size) {

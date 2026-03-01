@@ -20,7 +20,7 @@
  *   requests fall back to index.html for SPA-style routing support.
  */
 
-const CACHE_VERSION = 'coloring-book-v4';
+const CACHE_VERSION = 'coloring-book-v9';
 
 const ASSETS_TO_CACHE = [
     './',
@@ -36,9 +36,19 @@ const ASSETS_TO_CACHE = [
     './js/image-loader.js',
     './js/undo-manager.js',
     './js/touch-guard.js',
+    './js/feedback-manager.js',
+    './js/storage-manager.js',
+    './js/progress-manager.js',
     './images/icons/icon-192.svg',
     './images/icons/icon-512.svg',
     './images/coloring-pages/cat.svg',
+    './images/coloring-pages/dog.svg',
+    './images/coloring-pages/butterfly.svg',
+    './images/coloring-pages/fish.svg',
+    './images/coloring-pages/rocket.svg',
+    './images/coloring-pages/flower.svg',
+    './images/coloring-pages/unicorn.svg',
+    './images/coloring-pages/car.svg',
 ];
 
 // Caches all core app assets during service worker installation

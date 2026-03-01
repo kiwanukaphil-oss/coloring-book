@@ -53,4 +53,21 @@ test.describe('ColorPalette', () => {
     // #FFFF00 (Yellow) renders as rgb(255, 255, 0) in computed style
     expect(bgColor).toBe('rgb(255, 255, 0)');
   });
+
+  test('setCurrentColor programmatically changes the active color and highlights swatch', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      ColorPalette.setCurrentColor('#0000FF');
+      const swatches = document.querySelectorAll('.color-swatch');
+      const blueIndex = 11; // #0000FF is at index 11
+      return {
+        currentColor: ColorPalette.getCurrentColor(),
+        blueSelected: swatches[blueIndex].classList.contains('selected'),
+        indicatorColor: document.getElementById('active-color-indicator').style.backgroundColor
+      };
+    });
+
+    expect(result.currentColor).toBe('#0000FF');
+    expect(result.blueSelected).toBe(true);
+    expect(result.indicatorColor).toBe('rgb(0, 0, 255)');
+  });
 });

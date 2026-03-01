@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Simple rocket outline drawing for coloring -->
+
+  <g fill="none" stroke="black" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+
+    <!-- Rocket body -->
+    <path d="M360,550 L360,280 C360,220 380,160 400,120 C420,160 440,220 440,280 L440,550" stroke-width="4"/>
+
+    <!-- Nose cone detail -->
+    <path d="M375,220 C385,190 400,150 400,150 C400,150 415,190 425,220" stroke-width="3"/>
+
+    <!-- Body bottom -->
+    <line x1="360" y1="550" x2="440" y2="550" stroke-width="4"/>
+
+    <!-- Window (porthole) -->
+    <circle cx="400" cy="300" r="30" stroke-width="4"/>
+    <!-- Inner window -->
+    <circle cx="400" cy="300" r="20" stroke-width="3"/>
+    <!-- Window shine -->
+    <path d="M390,290 C388,285 392,282 396,286" stroke-width="2.5"/>
+
+    <!-- Second window -->
+    <circle cx="400" cy="400" r="18" stroke-width="3.5"/>
+    <circle cx="400" cy="400" r="10" stroke-width="3"/>
+
+    <!-- Body stripes -->
+    <line x1="360" y1="460" x2="440" y2="460" stroke-width="3"/>
+    <line x1="360" y1="480" x2="440" y2="480" stroke-width="3"/>
+
+    <!-- Left fin -->
+    <path d="M360,450 L300,560 L300,590 L360,530" stroke-width="4"/>
+    <!-- Left fin detail -->
+    <line x1="330" y1="520" x2="350" y2="490" stroke-width="3"/>
+
+    <!-- Right fin -->
+    <path d="M440,450 L500,560 L500,590 L440,530" stroke-width="4"/>
+    <!-- Right fin detail -->
+    <line x1="470" y1="520" x2="450" y2="490" stroke-width="3"/>
+
+    <!-- Center fin (bottom) -->
+    <path d="M385,550 L400,600 L415,550" stroke-width="4"/>
+
+    <!-- Exhaust flames -->
+    <path d="M350,590 C360,620 370,650 365,680 C375,660 385,640 400,660 C415,640 425,660 435,680 C430,650 440,620 450,590" stroke-width="3.5"/>
+
+    <!-- Inner flame -->
+    <path d="M375,590 C380,610 390,630 400,640 C410,630 420,610 425,590" stroke-width="3"/>
+
+    <!-- Stars around rocket -->
+    <!-- Star 1 -->
+    <path d="M200,200 L205,215 L220,215 L208,225 L213,240 L200,230 L187,240 L192,225 L180,215 L195,215 Z" stroke-width="3"/>
+
+    <!-- Star 2 -->
+    <path d="M600,150 L604,162 L616,162 L606,170 L610,182 L600,174 L590,182 L594,170 L584,162 L596,162 Z" stroke-width="3"/>
+
+    <!-- Star 3 -->
+    <path d="M580,450 L584,462 L596,462 L586,470 L590,482 L580,474 L570,482 L574,470 L564,462 L576,462 Z" stroke-width="3"/>
+
+    <!-- Star 4 -->
+    <path d="M220,500 L224,512 L236,512 L226,520 L230,532 L220,524 L210,532 L214,520 L204,512 L216,512 Z" stroke-width="3"/>
+
+    <!-- Small dots (distant stars) -->
+    <circle cx="150" cy="350" r="3" stroke-width="2.5"/>
+    <circle cx="650" cy="300" r="3" stroke-width="2.5"/>
+    <circle cx="250" cy="130" r="3" stroke-width="2.5"/>
+    <circle cx="550" cy="550" r="3" stroke-width="2.5"/>
+
+  </g>
+</svg>
