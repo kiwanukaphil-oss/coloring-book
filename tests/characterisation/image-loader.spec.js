@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('ImageLoader', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
   });
 
   test('gallery modal is visible on first load', async ({ page }) => {

@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('ColorPalette', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
   });
 
   test('default color is red (#FF0000)', async ({ page }) => {

@@ -2,7 +2,7 @@ const path = require('path');
 const { test, expect } = require('@playwright/test');
 
 async function loadDefaultColoringPage(page) {
-  await page.goto('/index.html');
+  await page.goto('/index.html?classic=1');
   const firstGalleryItem = page.locator('.gallery-item').first();
   await expect(firstGalleryItem).toBeVisible();
   await firstGalleryItem.click();
@@ -13,7 +13,7 @@ async function loadDefaultColoringPage(page) {
 }
 
 test('app boots and exposes both upload actions', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/index.html?classic=1');
   await expect(page.locator('#image-gallery-modal')).toBeVisible();
   await expect(page.locator('#upload-input')).toBeAttached();
   await expect(page.locator('#reference-upload-input')).toBeAttached();
@@ -56,7 +56,7 @@ test('brush stroke is undoable', async ({ page }) => {
 });
 
 test('reference panel upload, move, and resize works', async ({ page }) => {
-  await page.goto('/index.html');
+  await page.goto('/index.html?classic=1');
 
   const referenceFile = path.resolve(__dirname, '../images/coloring-pages/cat.svg');
   await page.setInputFiles('#reference-upload-input', referenceFile);

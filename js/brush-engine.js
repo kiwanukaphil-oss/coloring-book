@@ -73,6 +73,8 @@ const BrushEngine = (() => {
 
     function handlePointerDown(event) {
         if (!isStrokeTool()) return;
+        // Skip brush strokes during spacebar pan (ADR-009)
+        if (typeof ViewportManager !== 'undefined' && ViewportManager.isPanActive()) return;
 
         event.preventDefault();
         event.target.setPointerCapture?.(event.pointerId);
@@ -255,6 +257,7 @@ const BrushEngine = (() => {
         event.target.releasePointerCapture?.(event.pointerId);
         isDrawing = false;
         ProgressManager.scheduleAutoSave();
+        EventBus.emit('stroke:complete');
     }
 
     function setBrushSize(size) {

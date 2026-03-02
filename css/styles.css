@@ -1,6 +1,115 @@
 /* ========================================
    Kids Coloring Book PWA — Main Styles
+   Design tokens: ADR-010
    ======================================== */
+
+/* --- Design Tokens (ADR-010) --- */
+:root {
+    /* Typography */
+    --font-primary: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+    /* Colors — Brand */
+    --color-primary: #FF6F00;
+    --color-primary-glow: #FFD54F;
+
+    /* Colors — Surfaces */
+    --color-surface: #FFF9C4;
+    --color-surface-subtle: #fafafa;
+    --color-surface-muted: #f5f5f5;
+    --color-canvas: #ffffff;
+    --color-toolbar: #37474F;
+    --color-toolbar-border: #263238;
+    --color-toolbar-button: #546E7A;
+    --color-palette-bg: #f0f0f0;
+    --color-modal-bg: #ffffff;
+
+    /* Colors — Semantic */
+    --color-success: #4CAF50;
+    --color-success-dark: #388E3C;
+    --color-danger: #F44336;
+    --color-reference: #1E88E5;
+    --color-reference-dark: #1565C0;
+    --color-reference-light: #90CAF9;
+    --color-neutral: #78909C;
+    --color-neutral-dark: #546E7A;
+
+    /* Colors — Text */
+    --color-text-primary: #333;
+    --color-text-secondary: #666;
+    --color-text-muted: #999;
+    --color-text-on-dark: #ffffff;
+
+    /* Colors — Borders */
+    --color-border: #ddd;
+    --color-border-light: #ccc;
+    --color-border-lighter: #eee;
+    --color-border-subtle: #e0e0e0;
+
+    /* Colors — Overlays */
+    --color-overlay: rgba(0, 0, 0, 0.6);
+    --color-overlay-strong: rgba(0, 0, 0, 0.5);
+    --color-overlay-light: rgba(255, 255, 255, 0.6);
+
+    /* Colors — Glass (for reimagined UI) */
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-blur: 16px;
+
+    /* Sizing */
+    --size-toolbar-height: 70px;
+    --size-palette-width: 60px;
+    --size-tool-button-width: 60px;
+    --size-tool-button-height: 58px;
+    --size-swatch: 44px;
+    --size-tool-icon: 26px;
+    --size-color-indicator: 36px;
+    --size-spinner: 48px;
+
+    /* Radii */
+    --radius-xs: 6px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-pill: 24px;
+    --radius-round: 50%;
+
+    /* Shadows */
+    --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.28);
+    --shadow-swatch-selected: 0 0 0 3px #333, 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-tool-active: 0 0 0 3px #FFD54F;
+    --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.25);
+    --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.10);
+
+    /* Transitions */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-standard: ease;
+    --t-fast: 0.15s;
+    --t-quick: 0.1s;
+    --t-normal: 0.25s;
+    --t-slow: 0.4s;
+}
+
+/* Dark mode token overrides (placeholder — full values in Phase 2) */
+[data-theme="dark"] {
+    --color-surface: #1a1a2e;
+    --color-canvas: #ffffff; /* Canvas always stays white */
+    --color-surface-subtle: #16213e;
+    --color-surface-muted: #1a1a2e;
+    --color-toolbar: #0f3460;
+    --color-toolbar-border: #0a1929;
+    --color-toolbar-button: #16213e;
+    --color-palette-bg: #1a1a2e;
+    --color-modal-bg: #16213e;
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #b0b0b0;
+    --color-text-muted: #808080;
+    --color-border: #2a2a4a;
+    --color-border-light: #3a3a5a;
+    --color-border-lighter: #2a2a4a;
+    --color-border-subtle: #3a3a5a;
+    --color-overlay-light: rgba(0, 0, 0, 0.4);
+    --glass-bg: rgba(22, 33, 62, 0.85);
+}
 
 /* --- Reset & Base --- */
 *, *::before, *::after {
@@ -9,29 +118,65 @@
     box-sizing: border-box;
 }
 
+/* Generic visibility toggle (ADR-003).
+   Any element with .hidden is hidden regardless of its
+   normal display value. Per-component .hidden rules below
+   are redundant but kept for explicitness. */
+.hidden {
+    display: none !important;
+}
+
 html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #FFF9C4;
+    font-family: var(--font-primary);
+    background-color: var(--color-surface);
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
+}
+
+/* --- Accessibility (ADR-013) --- */
+
+/* Focus indicator visible only on keyboard navigation */
+:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 3px;
+}
+
+/* Visually hidden but accessible to screen readers */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+/* Respect OS-level motion preferences (ADR-013) */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* --- App Layout --- */
 #app-container {
     display: flex;
     width: 100%;
-    height: calc(100dvh - 70px); /* leave room for toolbar */
+    height: calc(100dvh - var(--size-toolbar-height)); /* leave room for toolbar */
 }
 
 /* --- Canvas Container --- */
 #canvas-container {
     flex: 1;
     position: relative;
-    background-color: #ffffff;
+    background-color: var(--color-canvas);
     overflow: hidden;
 }
 
@@ -80,10 +225,10 @@ html, body {
     min-width: 140px;
     min-height: 120px;
     max-width: calc(100% - 24px);
-    background-color: #ffffff;
-    border: 2px solid #1E88E5;
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+    background-color: var(--color-canvas);
+    border: 2px solid var(--color-reference);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-panel);
     z-index: 6;
     overflow: hidden;
     touch-action: none;
@@ -95,8 +240,8 @@ html, body {
 
 .reference-panel-handle {
     height: 34px;
-    background-color: #1E88E5;
-    color: #ffffff;
+    background-color: var(--color-reference);
+    color: var(--color-text-on-dark);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -114,9 +259,9 @@ html, body {
     width: 24px;
     height: 24px;
     border: none;
-    border-radius: 6px;
-    background-color: #1565C0;
-    color: #ffffff;
+    border-radius: var(--radius-xs);
+    background-color: var(--color-reference-dark);
+    color: var(--color-text-on-dark);
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -128,7 +273,7 @@ html, body {
     width: 100%;
     height: calc(100% - 34px);
     object-fit: contain;
-    background-color: #f5f5f5;
+    background-color: var(--color-surface-muted);
 }
 
 .reference-preview-image.is-empty {
@@ -143,16 +288,16 @@ html, body {
     height: 22px;
     cursor: nwse-resize;
     background:
-        linear-gradient(135deg, transparent 52%, #1E88E5 52%),
-        linear-gradient(135deg, transparent 68%, #90CAF9 68%);
+        linear-gradient(135deg, transparent 52%, var(--color-reference) 52%),
+        linear-gradient(135deg, transparent 68%, var(--color-reference-light) 68%);
     touch-action: none;
 }
 
 /* --- Color Palette (right side panel) --- */
 #color-palette {
-    width: 60px;
-    background-color: #f0f0f0;
-    border-left: 2px solid #ddd;
+    width: var(--size-palette-width);
+    background-color: var(--color-palette-bg);
+    border-left: 2px solid var(--color-border);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -164,13 +309,13 @@ html, body {
 }
 
 .color-swatch {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 3px solid #ccc;
+    width: var(--size-swatch);
+    height: var(--size-swatch);
+    border-radius: var(--radius-round);
+    border: 3px solid var(--color-border-light);
     cursor: pointer;
     flex-shrink: 0;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    transition: transform var(--t-fast) var(--ease-standard), border-color var(--t-fast) var(--ease-standard);
 }
 
 .color-swatch:hover {
@@ -178,10 +323,10 @@ html, body {
 }
 
 .color-swatch.selected {
-    border: 4px solid #ffffff;
-    box-shadow: 0 0 0 3px #333, 0 2px 8px rgba(0, 0, 0, 0.3);
+    border: 4px solid var(--color-text-on-dark);
+    box-shadow: var(--shadow-swatch-selected);
     transform: scale(1.15);
-    animation: swatch-bounce 0.3s ease;
+    animation: swatch-bounce 0.3s var(--ease-standard);
 }
 
 @keyframes swatch-bounce {
@@ -192,14 +337,14 @@ html, body {
 
 /* --- Toolbar (bottom bar) --- */
 #toolbar {
-    height: 70px;
-    background-color: #37474F;
+    height: var(--size-toolbar-height);
+    background-color: var(--color-toolbar);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     padding: 0 10px;
-    border-top: 2px solid #263238;
+    border-top: 2px solid var(--color-toolbar-border);
 }
 
 .tool-button {
@@ -207,14 +352,14 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 60px;
-    height: 58px;
+    width: var(--size-tool-button-width);
+    height: var(--size-tool-button-height);
     border: none;
-    border-radius: 12px;
-    background-color: #546E7A;
-    color: #ffffff;
+    border-radius: var(--radius-md);
+    background-color: var(--color-toolbar-button);
+    color: var(--color-text-on-dark);
     cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.1s ease;
+    transition: background-color var(--t-fast) var(--ease-standard), transform var(--t-quick) var(--ease-standard);
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -223,14 +368,14 @@ html, body {
 }
 
 .tool-button.active {
-    background-color: #FF6F00;
-    box-shadow: 0 0 0 3px #FFD54F;
+    background-color: var(--color-primary);
+    box-shadow: var(--shadow-tool-active);
 }
 
 .tool-icon {
-    width: 26px;
-    height: 26px;
-    fill: #ffffff;
+    width: var(--size-tool-icon);
+    height: var(--size-tool-icon);
+    fill: var(--color-text-on-dark);
 }
 
 .tool-label {
@@ -240,10 +385,10 @@ html, body {
 }
 
 .active-color-indicator {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 3px solid #ffffff;
+    width: var(--size-color-indicator);
+    height: var(--size-color-indicator);
+    border-radius: var(--radius-round);
+    border: 3px solid var(--color-text-on-dark);
     margin-left: 6px;
     flex-shrink: 0;
 }
@@ -263,12 +408,12 @@ html, body {
 .brush-size-slider {
     width: 90px;
     height: 28px;
-    accent-color: #FF6F00;
+    accent-color: var(--color-primary);
     cursor: pointer;
 }
 
 .brush-size-value {
-    color: #ffffff;
+    color: var(--color-text-on-dark);
     font-size: 13px;
     font-weight: 600;
     min-width: 20px;
@@ -282,7 +427,7 @@ html, body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: var(--color-overlay);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -294,15 +439,15 @@ html, body {
 }
 
 .modal-content {
-    background-color: #ffffff;
-    border-radius: 20px;
+    background-color: var(--color-modal-bg);
+    border-radius: var(--radius-lg);
     padding: 24px;
     width: 90%;
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    animation: modal-enter 0.25s ease-out;
+    box-shadow: var(--shadow-modal);
+    animation: modal-enter var(--t-normal) ease-out;
 }
 
 @keyframes modal-enter {
@@ -323,7 +468,7 @@ html, body {
 
 .modal-title {
     font-size: 24px;
-    color: #FF6F00;
+    color: var(--color-primary);
     text-align: center;
     margin-bottom: 16px;
 }
@@ -333,7 +478,7 @@ html, body {
     display: flex;
     gap: 0;
     margin-bottom: 16px;
-    border-bottom: 3px solid #eee;
+    border-bottom: 3px solid var(--color-border-lighter);
 }
 
 .gallery-tab {
@@ -343,20 +488,20 @@ html, body {
     background: none;
     font-size: 18px;
     font-weight: 700;
-    color: #999;
+    color: var(--color-text-muted);
     cursor: pointer;
     border-bottom: 3px solid transparent;
     margin-bottom: -3px;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    transition: color var(--t-fast) var(--ease-standard), border-color var(--t-fast) var(--ease-standard);
 }
 
 .gallery-tab:hover {
-    color: #666;
+    color: var(--color-text-secondary);
 }
 
 .gallery-tab-active {
-    color: #FF6F00;
-    border-bottom-color: #FF6F00;
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
 }
 
 .gallery-panel.hidden {
@@ -366,7 +511,7 @@ html, body {
 /* --- Saved Artwork --- */
 .saved-artwork-empty {
     text-align: center;
-    color: #999;
+    color: var(--color-text-muted);
     font-size: 16px;
     padding: 40px 16px;
 }
@@ -378,17 +523,17 @@ html, body {
 .saved-artwork-card {
     position: relative;
     aspect-ratio: 1;
-    border: 3px solid #ddd;
-    border-radius: 12px;
+    border: 3px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.15s ease, transform 0.1s ease;
-    background-color: #fafafa;
+    transition: border-color var(--t-fast) var(--ease-standard), transform var(--t-quick) var(--ease-standard);
+    background-color: var(--color-surface-subtle);
     animation: card-enter 0.3s ease-out;
 }
 
 .saved-artwork-card:hover {
-    border-color: #FF6F00;
+    border-color: var(--color-primary);
     transform: scale(1.03);
 }
 
@@ -405,9 +550,9 @@ html, body {
     width: 28px;
     height: 28px;
     border: none;
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
+    border-radius: var(--radius-round);
+    background-color: var(--color-overlay-strong);
+    color: var(--color-text-on-dark);
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
@@ -416,7 +561,7 @@ html, body {
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.15s ease;
+    transition: opacity var(--t-fast) var(--ease-standard);
 }
 
 .saved-artwork-card:hover .saved-artwork-delete {
@@ -428,18 +573,18 @@ html, body {
     bottom: 4px;
     left: 4px;
     padding: 2px 8px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     font-size: 11px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--color-text-on-dark);
 }
 
 .saved-artwork-badge-progress {
-    background-color: #FF6F00;
+    background-color: var(--color-primary);
 }
 
 .saved-artwork-badge-completed {
-    background-color: #4CAF50;
+    background-color: var(--color-success);
 }
 
 /* --- Gallery Grid --- */
@@ -452,12 +597,12 @@ html, body {
 
 .gallery-item {
     aspect-ratio: 1;
-    border: 3px solid #ddd;
-    border-radius: 12px;
+    border: 3px solid var(--color-border);
+    border-radius: var(--radius-md);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.15s ease, transform 0.1s ease;
-    background-color: #fafafa;
+    transition: border-color var(--t-fast) var(--ease-standard), transform var(--t-quick) var(--ease-standard);
+    background-color: var(--color-surface-subtle);
     animation: card-enter 0.3s ease-out;
 }
 
@@ -466,7 +611,7 @@ html, body {
 }
 
 .gallery-item:hover {
-    border-color: #FF6F00;
+    border-color: var(--color-primary);
     transform: scale(1.03);
 }
 
@@ -480,52 +625,52 @@ html, body {
     display: block;
     width: 100%;
     padding: 14px;
-    background-color: #4CAF50;
-    color: #ffffff;
+    background-color: var(--color-success);
+    color: var(--color-text-on-dark);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: 18px;
     font-weight: 600;
     text-align: center;
     cursor: pointer;
     margin-bottom: 10px;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--t-fast) var(--ease-standard);
 }
 
 .upload-button:hover {
-    background-color: #388E3C;
+    background-color: var(--color-success-dark);
 }
 
 .upload-button-reference {
-    background-color: #1E88E5;
+    background-color: var(--color-reference);
 }
 
 .upload-button-reference:hover {
-    background-color: #1565C0;
+    background-color: var(--color-reference-dark);
 }
 
 .gallery-close-button {
     display: block;
     width: 100%;
     padding: 14px;
-    background-color: #78909C;
-    color: #ffffff;
+    background-color: var(--color-neutral);
+    color: var(--color-text-on-dark);
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color var(--t-fast) var(--ease-standard);
 }
 
 .gallery-close-button:hover {
-    background-color: #546E7A;
+    background-color: var(--color-neutral-dark);
 }
 
 /* --- Clear Confirmation --- */
 .confirm-text {
     font-size: 22px;
-    color: #333;
+    color: var(--color-text-primary);
     margin-bottom: 20px;
     font-weight: 600;
 }
@@ -539,11 +684,11 @@ html, body {
 .confirm-button {
     padding: 14px 36px;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: 20px;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.1s ease;
+    transition: transform var(--t-quick) var(--ease-standard);
 }
 
 .confirm-button:active {
@@ -551,19 +696,19 @@ html, body {
 }
 
 .confirm-yes {
-    background-color: #F44336;
-    color: #ffffff;
+    background-color: var(--color-danger);
+    color: var(--color-text-on-dark);
 }
 
 .confirm-no {
-    background-color: #4CAF50;
-    color: #ffffff;
+    background-color: var(--color-success);
+    color: var(--color-text-on-dark);
 }
 
 /* --- Resume Modal --- */
 .resume-subtitle {
     font-size: 16px;
-    color: #666;
+    color: var(--color-text-secondary);
     margin-bottom: 16px;
 }
 
@@ -577,19 +722,19 @@ html, body {
     width: 160px;
     height: 160px;
     object-fit: contain;
-    border: 3px solid #ddd;
-    border-radius: 12px;
-    background-color: #fafafa;
+    border: 3px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-subtle);
 }
 
 .confirm-resume {
-    background-color: #4CAF50;
-    color: #ffffff;
+    background-color: var(--color-success);
+    color: var(--color-text-on-dark);
 }
 
 .confirm-fresh {
-    background-color: #78909C;
-    color: #ffffff;
+    background-color: var(--color-neutral);
+    color: var(--color-text-on-dark);
 }
 
 /* --- Loading Spinner --- */
@@ -602,7 +747,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255, 255, 255, 0.6);
+    background-color: var(--color-overlay-light);
     z-index: 10;
 }
 
@@ -611,11 +756,11 @@ html, body {
 }
 
 .spinner-ring {
-    width: 48px;
-    height: 48px;
-    border: 5px solid #e0e0e0;
-    border-top-color: #FF6F00;
-    border-radius: 50%;
+    width: var(--size-spinner);
+    height: var(--size-spinner);
+    border: 5px solid var(--color-border-subtle);
+    border-top-color: var(--color-primary);
+    border-radius: var(--radius-round);
     animation: spinner-rotate 0.8s linear infinite;
 }
 
@@ -630,7 +775,7 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     z-index: 200;
-    animation: toast-enter 0.25s ease-out;
+    animation: toast-enter var(--t-normal) ease-out;
 }
 
 .toast-container.hidden {
@@ -644,12 +789,12 @@ html, body {
 .toast-message {
     display: inline-block;
     padding: 10px 20px;
-    background-color: #37474F;
-    color: #ffffff;
+    background-color: var(--color-toolbar);
+    color: var(--color-text-on-dark);
     font-size: 15px;
     font-weight: 600;
-    border-radius: 24px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-toast);
     white-space: nowrap;
 }
 
@@ -673,4 +818,575 @@ html, body {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+/* ========================================
+   Dual-Mode UI — Kids & Studio (ADR-015)
+   ======================================== */
+
+/* --- Mode Switching Visibility --- */
+/* Hide classic toolbar and palette in both new modes */
+[data-mode="kids"] #toolbar,
+[data-mode="kids"] #color-palette,
+[data-mode="studio"] #toolbar,
+[data-mode="studio"] #color-palette {
+    display: none !important;
+}
+
+/* Canvas fills full height when classic toolbar is hidden */
+[data-mode="kids"] #app-container,
+[data-mode="studio"] #app-container {
+    height: 100dvh;
+}
+
+/* Hide studio elements in kids mode */
+[data-mode="kids"] .studio-only {
+    display: none !important;
+}
+
+/* Hide kids elements in studio mode */
+[data-mode="studio"] .kids-only {
+    display: none !important;
+}
+
+/* Classic mode (?classic=1): hide ALL mode-specific elements so
+   the classic toolbar and palette remain the only visible controls.
+   When data-mode is absent, neither kids nor studio elements show. */
+:root:not([data-mode]) .kids-only,
+:root:not([data-mode]) .studio-only,
+:root:not([data-mode]) .mode-switch {
+    display: none !important;
+}
+
+/* --- Mode Switch Toggle --- */
+.mode-switch {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-pill);
+    padding: 4px;
+    box-shadow: var(--shadow-float);
+    gap: 2px;
+}
+
+.mode-option {
+    padding: 8px 20px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--t-fast) var(--ease-spring);
+}
+
+.mode-option.active {
+    background: var(--color-primary);
+    color: var(--color-text-on-dark);
+    box-shadow: 0 2px 8px rgba(255, 111, 0, 0.3);
+}
+
+/* --- Theme Toggle --- */
+.theme-toggle {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 50;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-float);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: transform var(--t-fast) var(--ease-spring);
+}
+
+.theme-toggle:active {
+    transform: scale(0.9);
+}
+
+/* --- Kids Mode Tool Bubbles --- */
+.kids-tools {
+    position: fixed;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Handedness: mirror tools to right side for left-handed users */
+[data-hand="left"] .kids-tools {
+    left: auto;
+    right: 16px;
+}
+
+.kids-tool-bubble {
+    width: 64px;
+    height: 64px;
+    border: 4px solid var(--color-text-on-dark);
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-float);
+    font-size: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--t-fast) var(--ease-spring), box-shadow var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-tool-bubble:active {
+    transform: scale(0.9);
+}
+
+.kids-tool-bubble.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 4px rgba(255, 111, 0, 0.35), var(--shadow-float);
+    transform: scale(1.08);
+}
+
+@keyframes kids-tool-bounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1.08); }
+}
+
+/* --- Kids Undo/Redo Bar --- */
+.kids-undo-bar {
+    position: fixed;
+    top: 12px;
+    right: 60px;
+    z-index: 40;
+    display: flex;
+    gap: 8px;
+}
+
+/* Mirror undo bar for left-handed users */
+[data-hand="left"] .kids-undo-bar {
+    right: auto;
+    left: 60px;
+}
+
+.kids-action-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-float);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--t-fast) var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-action-btn:active {
+    transform: scale(0.9);
+}
+
+/* --- Kids Size Bubbles --- */
+.kids-size-bubbles {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+[data-hand="left"] .kids-size-bubbles {
+    left: auto;
+    right: 16px;
+}
+
+.kids-size-bubble {
+    border: 3px solid var(--color-border-light);
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    cursor: pointer;
+    transition: transform var(--t-fast) var(--ease-spring), border-color var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-size-bubble.size-small {
+    width: 20px;
+    height: 20px;
+}
+
+.kids-size-bubble.size-medium {
+    width: 32px;
+    height: 32px;
+}
+
+.kids-size-bubble.size-large {
+    width: 44px;
+    height: 44px;
+}
+
+.kids-size-bubble.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 111, 0, 0.3);
+}
+
+/* --- Kids Top Left Actions --- */
+.kids-top-left {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 40;
+    display: flex;
+    gap: 8px;
+}
+
+[data-hand="left"] .kids-top-left {
+    left: auto;
+    right: 12px;
+}
+
+[data-hand="left"] .kids-undo-bar {
+    right: auto;
+    left: 12px;
+}
+
+/* --- Handedness Toggle --- */
+.hand-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 16px;
+    z-index: 40;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--shadow-float);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-hand="left"] .hand-toggle {
+    right: auto;
+    left: 16px;
+}
+
+/* --- Studio Dock (bottom center) --- */
+.dock {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-float);
+}
+
+.dock-tool {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--t-fast) var(--ease-standard), transform var(--t-quick) var(--ease-spring);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.dock-tool:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.dock-tool:active {
+    transform: scale(0.9);
+}
+
+.dock-tool.active {
+    background: var(--color-primary);
+}
+
+.dock-tool.active .dock-tool-icon {
+    fill: var(--color-text-on-dark);
+}
+
+.dock-tool-icon {
+    width: 22px;
+    height: 22px;
+    fill: var(--color-text-primary);
+}
+
+.dock-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--color-border-light);
+    margin: 0 4px;
+}
+
+/* --- Studio Undo/Redo Bar --- */
+.studio-undo-bar {
+    position: fixed;
+    top: 12px;
+    right: 60px;
+    z-index: 40;
+    display: flex;
+    gap: 4px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-md);
+    padding: 4px;
+    box-shadow: var(--shadow-float);
+}
+
+.studio-action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.studio-action-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.studio-action-btn:active {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.studio-action-icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--color-text-primary);
+}
+
+/* --- Zoom Pill (ADR-009) --- */
+.zoom-pill {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-pill);
+    padding: 4px 8px;
+    box-shadow: var(--shadow-float);
+}
+
+.zoom-pill-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.zoom-pill-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.zoom-pill-btn:active {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.zoom-pill-value {
+    min-width: 40px;
+    text-align: center;
+    font-family: var(--font-primary);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    user-select: none;
+}
+
+/* --- Kids Lighter/Darker Buttons (ADR-012) --- */
+.kids-lightness {
+    position: fixed;
+    bottom: 100px;
+    right: 12px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+[data-hand="left"] .kids-lightness {
+    right: auto;
+    left: 12px;
+}
+
+/* --- Color Picker Popover (ADR-012) --- */
+.color-picker {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    background: var(--color-modal-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-modal);
+    padding: 16px;
+    max-width: 240px;
+}
+
+.color-picker.hidden {
+    display: none;
+}
+
+.picker-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.picker-hue-ring {
+    cursor: crosshair;
+    border-radius: 50%;
+}
+
+.picker-sl-square {
+    cursor: crosshair;
+    border-radius: var(--radius-sm);
+}
+
+.picker-preview {
+    width: 100%;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--color-border);
+}
+
+.picker-recent {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    min-height: 24px;
+}
+
+.picker-recent-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+    padding: 0;
+}
+
+.picker-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.picker-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.picker-btn-confirm {
+    background: var(--color-primary);
+    color: var(--color-text-on-dark);
+}
+
+.picker-btn-cancel {
+    background: var(--color-surface-muted);
+    color: var(--color-text-primary);
+}
+
+.picker-open-btn {
+    position: fixed;
+    bottom: 60px;
+    right: 8px;
+    z-index: 20;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px dashed var(--color-border);
+    background: var(--color-surface-muted);
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+}
+
+/* Hide picker open button in kids/studio modes (they have their own) */
+[data-mode="kids"] .picker-open-btn,
+[data-mode="studio"] .picker-open-btn {
+    display: none;
+}
+
+:root:not([data-mode]) .kids-lightness {
+    display: none !important;
 }

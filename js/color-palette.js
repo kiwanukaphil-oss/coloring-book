@@ -47,7 +47,8 @@ const ColorPalette = (() => {
 
     // Builds the color swatch buttons inside the palette
     // container and sets up click handlers for each one.
-    // The first color is selected by default.
+    // Uses roving tabindex pattern for keyboard navigation
+    // (ADR-013). The first color is selected by default.
     function initialize() {
         paletteContainer = document.getElementById('color-palette');
 
@@ -56,6 +57,10 @@ const ColorPalette = (() => {
             swatch.className = 'color-swatch';
             swatch.style.backgroundColor = color;
             swatch.setAttribute('aria-label', 'Color ' + color);
+            swatch.setAttribute('role', 'radio');
+            swatch.setAttribute('aria-checked', index === 0 ? 'true' : 'false');
+            // Roving tabindex: only the active swatch is tabbable (ADR-013)
+            swatch.setAttribute('tabindex', index === 0 ? '0' : '-1');
 
             // Add a thin dark border to white swatch so it's visible
             if (color === '#FFFFFF') {
@@ -73,21 +78,60 @@ const ColorPalette = (() => {
             paletteContainer.appendChild(swatch);
             swatchElements.push(swatch);
         });
+
+        setupKeyboardNavigation();
+    }
+
+    // Arrow keys move focus between swatches, Enter/Space selects.
+    // Uses roving tabindex so Tab moves to the next UI group,
+    // not through all 20 swatches. (ADR-013)
+    function setupKeyboardNavigation() {
+        paletteContainer.addEventListener('keydown', function handleSwatchKeydown(event) {
+            const currentIndex = swatchElements.indexOf(document.activeElement);
+            if (currentIndex === -1) return;
+
+            let nextIndex = -1;
+            if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                nextIndex = (currentIndex + 1) % swatchElements.length;
+            } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+                event.preventDefault();
+                nextIndex = (currentIndex - 1 + swatchElements.length) % swatchElements.length;
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const color = KID_FRIENDLY_COLORS[currentIndex];
+                selectColor(color, currentIndex);
+                return;
+            } else {
+                return;
+            }
+
+            // Move focus via roving tabindex
+            swatchElements[currentIndex].setAttribute('tabindex', '-1');
+            swatchElements[nextIndex].setAttribute('tabindex', '0');
+            swatchElements[nextIndex].focus();
+        });
     }
 
     // Updates the selected color, highlights the chosen swatch,
+    // syncs aria-checked and roving tabindex (ADR-013),
     // and updates the toolbar's color indicator dot
     function selectColor(color, index) {
         currentColor = color;
 
         swatchElements.forEach((el, i) => {
-            el.classList.toggle('selected', i === index);
+            const isSelected = i === index;
+            el.classList.toggle('selected', isSelected);
+            el.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+            el.setAttribute('tabindex', isSelected ? '0' : '-1');
         });
 
         const indicator = document.getElementById('active-color-indicator');
         if (indicator) {
             indicator.style.backgroundColor = color;
         }
+
+        EventBus.emit('color:changed', { color });
     }
 
     function getCurrentColor() {

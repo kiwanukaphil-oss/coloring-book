@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('UndoManager', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
   });
 
   test('starts with no undo steps', async ({ page }) => {
@@ -189,25 +189,23 @@ test.describe('UndoManager', () => {
     expect(result.hasRedoAfterClear).toBe(false);
   });
 
-  test('stack is capped at 10 snapshots', async ({ page }) => {
-    const result = await page.evaluate(() => {
-      // Push 15 snapshots
-      for (let i = 0; i < 15; i++) {
+  test('stack is capped at 50 commands', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      // Push 55 snapshots (exceeds the 50-command cap)
+      for (let i = 0; i < 55; i++) {
         UndoManager.saveSnapshot();
       }
 
       // Pop them all and count how many come back
       let count = 0;
       while (UndoManager.hasUndoSteps()) {
-        // undoLastAction is async but returns Promise<true> for each pop
+        const undone = await UndoManager.undoLastAction();
+        if (!undone) break;
         count++;
-        // We can't await here in a sync loop, so just check hasUndoSteps
-        // by calling the synchronous internal check
-        UndoManager.undoLastAction(); // fire-and-forget
       }
       return count;
     });
 
-    expect(result).toBe(10);
+    expect(result).toBe(50);
   });
 });

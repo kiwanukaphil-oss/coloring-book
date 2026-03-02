@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('ProgressManager', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
     // Wait for async StorageManager initialization to complete
     await page.waitForFunction(() => StorageManager.isAvailable());
   });

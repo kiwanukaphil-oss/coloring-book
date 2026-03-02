@@ -20,20 +20,25 @@
  *   requests fall back to index.html for SPA-style routing support.
  */
 
-const CACHE_VERSION = 'coloring-book-v9';
+const CACHE_VERSION = 'coloring-book-v14';
 
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './manifest.json',
     './css/styles.css',
+    './js/event-bus.js',
+    './js/mode-manager.js',
     './js/app.js',
     './js/canvas-manager.js',
+    './js/viewport-manager.js',
     './js/flood-fill.js',
     './js/brush-engine.js',
     './js/color-palette.js',
+    './js/color-picker.js',
     './js/toolbar.js',
     './js/image-loader.js',
+    './js/command-manager.js',
     './js/undo-manager.js',
     './js/touch-guard.js',
     './js/feedback-manager.js',

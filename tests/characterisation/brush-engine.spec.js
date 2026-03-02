@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('BrushEngine', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
     // Wait for async init to finish (gallery shown after IndexedDB opens)
     await page.waitForFunction(() => {
       const gallery = document.getElementById('image-gallery-modal');

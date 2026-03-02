@@ -473,6 +473,34 @@ const ImageLoader = (() => {
                 hideGallery();
             }
         });
+
+        // Escape key closes gallery (ADR-013)
+        document.addEventListener('keydown', function handleGalleryEscape(event) {
+            if (event.key === 'Escape' && !galleryModal.classList.contains('hidden')) {
+                hideGallery();
+            }
+        });
+
+        // Focus trap: Tab/Shift+Tab cycles within modal (ADR-013)
+        galleryModal.addEventListener('keydown', function handleFocusTrap(event) {
+            if (event.key !== 'Tab') return;
+
+            const focusableElements = galleryModal.querySelectorAll(
+                'button:not([hidden]):not([disabled]), [tabindex]:not([tabindex="-1"]), input:not([hidden]), label'
+            );
+            if (focusableElements.length === 0) return;
+
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            if (event.shiftKey && document.activeElement === firstFocusable) {
+                event.preventDefault();
+                lastFocusable.focus();
+            } else if (!event.shiftKey && document.activeElement === lastFocusable) {
+                event.preventDefault();
+                firstFocusable.focus();
+            }
+        });
     }
 
     // Loads a coloring page image onto the canvas, clearing
@@ -501,6 +529,12 @@ const ImageLoader = (() => {
     function showGallery() {
         switchToTemplatesTab();
         galleryModal.classList.remove('hidden');
+
+        // Move focus into the modal for keyboard users (ADR-013)
+        const firstFocusable = galleryModal.querySelector('button:not([hidden]):not([disabled])');
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
     }
 
     function hideGallery() {

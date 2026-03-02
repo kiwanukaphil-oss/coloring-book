@@ -1,0 +1,2344 @@
+<!DOCTYPE html>
+<html lang="en" data-hand="right">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF6F00">
+    <title>My Coloring Book — Reimagined (Improved)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+/* =============================================
+   REIMAGINED COLORING BOOK — IMPROVED
+   Dual-mode: Kids + Studio
+   Fixes from assessment:
+     ✓ Handedness support (mirrored layouts)
+     ✓ Eyedropper tool
+     ✓ Canvas stays white in dark mode
+     ✓ Reduced glassmorphism for perf
+     ✓ Keyboard-accessible radial menu
+     ✓ Sound/haptics toggle
+     ✓ Completion progress ring
+     ✓ Smooth mode transitions
+     ✓ Better ARIA & screen reader support
+     ✓ Responsive phone/tablet/desktop
+   ============================================= */
+
+:root {
+    --font: 'Nunito', -apple-system, sans-serif;
+
+    /* Glass — reduced blur for performance */
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-bg-dark: rgba(15, 15, 35, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.35);
+    --glass-border-dark: rgba(255, 255, 255, 0.1);
+    --blur: 16px; /* reduced from 24px for low-end device perf */
+
+    /* Brand */
+    --accent: #FF6F00;
+    --accent-light: #FFA040;
+    --accent-glow: rgba(255, 111, 0, 0.35);
+    --accent-surface: rgba(255, 111, 0, 0.08);
+
+    /* Semantic */
+    --success: #10AC84;
+    --success-glow: rgba(16, 172, 132, 0.3);
+    --danger: #EE5A24;
+    --info: #0ABDE3;
+    --purple: #6C5CE7;
+
+    /* Text */
+    --text: #1a1a2e;
+    --text-soft: #555;
+    --text-muted: #999;
+    --text-on-glass: #1a1a2e;
+    --white: #ffffff;
+
+    /* Surfaces */
+    --canvas-bg: #f8f7f4;
+    --canvas-paper: #ffffff; /* ALWAYS white — the drawing surface */
+    --surface-hover: rgba(0,0,0,0.04);
+    --surface-active: rgba(0,0,0,0.06);
+
+    /* Radii */
+    --r-sm: 12px;
+    --r-md: 18px;
+    --r-lg: 28px;
+    --r-xl: 40px;
+    --r-full: 9999px;
+
+    /* Shadows */
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-glow: 0 0 20px var(--accent-glow);
+    --shadow-deep: 0 16px 48px rgba(0,0,0,0.18);
+    --shadow-tool: 0 4px 16px rgba(0,0,0,0.12);
+
+    /* Transitions */
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --t-fast: 0.15s;
+    --t-normal: 0.25s;
+    --t-slow: 0.4s;
+}
+
+/* ---- DARK MODE ---- */
+[data-theme="dark"] {
+    --glass-bg: var(--glass-bg-dark);
+    --glass-border: var(--glass-border-dark);
+    --text: #e8e8f0;
+    --text-soft: #a0a0b8;
+    --text-muted: #606078;
+    --text-on-glass: #e8e8f0;
+    --canvas-bg: #1a1a2e;
+    --canvas-paper: #ffffff; /* CRITICAL: canvas paper stays white in dark mode */
+    --surface-hover: rgba(255,255,255,0.04);
+    --surface-active: rgba(255,255,255,0.06);
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.25);
+}
+
+/* ---- RESET ---- */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    font-family: var(--font);
+    background: var(--canvas-bg);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Accessibility: reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+    /* But keep color-change feedback visible */
+    .kids-tool-bubble.active,
+    .kids-color-swatch.active {
+        transition-duration: 0.15s !important;
+    }
+}
+
+/* Focus indicator for keyboard nav */
+:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--r-sm);
+}
+
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-float);
+}
+
+/* Performance: disable blur on low-end hint */
+@media (prefers-reduced-motion: reduce) {
+    .glass {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.95);
+    }
+    [data-theme="dark"] .glass {
+        background: rgba(15, 15, 35, 0.95);
+    }
+}
+
+.hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+
+/* =============================================
+   CANVAS — always 100%, paper always white
+   ============================================= */
+#canvas-world {
+    width: 100%; height: 100%;
+    position: relative; overflow: hidden;
+    background: var(--canvas-bg);
+}
+
+#canvas-world::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(255,240,200,0.25) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(200,230,255,0.18) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+}
+
+[data-theme="dark"] #canvas-world::before {
+    background-image:
+        radial-gradient(circle at 20% 30%, rgba(60,40,100,0.12) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(20,60,100,0.08) 0%, transparent 50%);
+}
+
+.canvas-artwork {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+}
+
+/* The "paper" — always white regardless of theme */
+.canvas-paper {
+    background: var(--canvas-paper);
+    border-radius: 4px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.03);
+    padding: 20px;
+    display: flex; align-items: center; justify-content: center;
+    transition: width var(--t-slow) var(--ease-out), height var(--t-slow) var(--ease-out);
+}
+
+[data-mode="kids"] .canvas-paper {
+    width: min(72vw, 58vh);
+    height: min(72vw, 58vh);
+}
+
+[data-mode="studio"] .canvas-paper {
+    width: min(62vw, 62vh);
+    height: min(62vw, 62vh);
+}
+
+.canvas-paper svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.04));
+}
+
+
+/* =============================================
+   CONFETTI & CELEBRATIONS
+   ============================================= */
+.confetti-container {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9999;
+    overflow: hidden;
+}
+
+.confetti-piece {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    animation: confetti-fall 1.5s ease-out forwards;
+    opacity: 0;
+}
+
+@keyframes confetti-fall {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translateY(120vh) rotate(720deg) scale(0.3); }
+}
+
+/* Reduced-motion: simple color flash instead of confetti */
+.reduced-feedback {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 9998;
+    background: rgba(255,111,0,0.08);
+    animation: flash-feedback 0.4s ease-out forwards;
+}
+
+@keyframes flash-feedback {
+    0% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.star-burst {
+    position: fixed;
+    pointer-events: none; z-index: 9998;
+    font-size: 28px;
+    animation: star-pop 0.5s ease-out forwards;
+}
+
+@keyframes star-pop {
+    0% { opacity: 1; transform: scale(0.3) rotate(0deg); }
+    50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+    100% { opacity: 0; transform: scale(0.7) rotate(360deg) translateY(-30px); }
+}
+
+
+/* =============================================
+   MODE SWITCH — top center, always visible
+   ============================================= */
+#mode-switch {
+    position: fixed;
+    top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 500;
+    display: flex; align-items: center;
+    border-radius: var(--r-full);
+    padding: 4px; gap: 0;
+}
+
+.mode-option {
+    padding: 7px 18px;
+    border-radius: var(--r-full);
+    border: none; background: none;
+    font-family: var(--font);
+    font-size: 13px; font-weight: 800;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--t-normal) ease;
+    display: flex; align-items: center; gap: 5px;
+}
+
+.mode-option.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+.mode-option:focus-visible {
+    outline-offset: 4px;
+}
+
+
+/* =============================================
+   TOP BAR — settings row (sound + theme)
+   Kids: row below undo-bar, same side (non-dominant)
+   Studio: far-right, undo-redo offset to its left
+   ============================================= */
+#top-bar {
+    position: fixed;
+    z-index: 500;
+    display: flex; gap: 6px; align-items: center;
+}
+
+/* Kids mode: drop below undo-bar (which is at top:14) */
+[data-mode="kids"][data-hand="right"] #top-bar { top: 74px; right: 14px; }
+[data-mode="kids"][data-hand="left"] #top-bar { top: 74px; left: 14px; right: auto; }
+
+/* Studio mode: top-right corner */
+[data-mode="studio"] #top-bar { top: 14px; right: 14px; }
+
+.top-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--r-full);
+    border: none; cursor: pointer;
+    font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+    color: var(--text-soft);
+}
+
+.top-btn:hover { transform: scale(1.08); }
+.top-btn:active { transform: scale(0.95); }
+
+.top-btn.sound-on { color: var(--accent); }
+
+
+/* =============================================
+   COMPLETION PROGRESS RING (kids mode)
+   ============================================= */
+#completion-ring {
+    position: fixed;
+    z-index: 100;
+    width: 56px; height: 56px;
+}
+
+/* Handedness positioning */
+[data-hand="right"] #completion-ring { top: 14px; left: 14px; }
+[data-hand="left"] #completion-ring { top: 14px; right: 14px; }
+
+.completion-ring-bg {
+    width: 100%; height: 100%;
+    position: relative;
+    cursor: pointer;
+    transition: transform var(--t-fast);
+}
+
+.completion-ring-bg:hover { transform: scale(1.06); }
+
+.completion-ring-bg svg {
+    width: 100%; height: 100%;
+    transform: rotate(-90deg);
+}
+
+.completion-track { fill: none; stroke: rgba(0,0,0,0.06); stroke-width: 4; }
+.completion-fill { fill: none; stroke: var(--success); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.6s var(--ease-out); }
+
+[data-theme="dark"] .completion-track { stroke: rgba(255,255,255,0.06); }
+
+.completion-icon {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+}
+
+.completion-pct {
+    position: absolute;
+    bottom: -4px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; font-weight: 900;
+    color: var(--success);
+    background: var(--canvas-bg);
+    padding: 0 4px;
+    border-radius: var(--r-full);
+}
+
+
+/* =============================================
+   ====  K I D S   M O D E  ====
+   Big, bubbly, no text, always visible, joyful.
+   ============================================= */
+
+/* Hide studio UI in kids mode */
+[data-mode="kids"] #dock,
+[data-mode="kids"] #radial-menu,
+[data-mode="kids"] .radial-backdrop,
+[data-mode="kids"] #quick-actions,
+[data-mode="kids"] #gesture-bar,
+[data-mode="kids"] #zoom-pill,
+[data-mode="kids"] #undo-redo,
+[data-mode="kids"] .undo-dots,
+[data-mode="kids"] .edge-trigger,
+[data-mode="kids"] #size-ring,
+[data-mode="kids"] #preset-strip,
+[data-mode="kids"] #color-river,
+[data-mode="kids"] #layer-drawer {
+    display: none !important;
+}
+
+/* Hide kids UI in studio mode */
+[data-mode="studio"] #kids-tools,
+[data-mode="studio"] #kids-colors,
+[data-mode="studio"] #kids-undo-bar,
+[data-mode="studio"] #kids-size-bubbles,
+[data-mode="studio"] #kids-sticker-tray,
+[data-mode="studio"] #kids-gallery-btn,
+[data-mode="studio"] #kids-save-btn,
+[data-mode="studio"] #kids-ref-btn,
+[data-mode="studio"] #completion-ring {
+    display: none !important;
+}
+
+/* --- KIDS: Tool bubbles — handedness-aware --- */
+#kids-tools {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: left var(--t-slow) var(--ease-out), right var(--t-slow) var(--ease-out);
+}
+
+/* Handedness: tool position */
+[data-hand="right"] #kids-tools { left: 12px; }
+[data-hand="left"] #kids-tools { right: 12px; }
+
+.kids-tool-bubble {
+    width: 64px; height: 64px;
+    border-radius: var(--r-full);
+    border: 3px solid rgba(255,255,255,0.85);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    transition: all 0.2s var(--ease-spring);
+    box-shadow: var(--shadow-tool);
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-tool-bubble:hover { transform: scale(1.12); }
+.kids-tool-bubble:active { transform: scale(0.92); }
+
+.kids-tool-bubble.active {
+    border-color: white;
+    box-shadow: 0 0 0 4px var(--accent), 0 4px 20px rgba(255,111,0,0.4);
+    transform: scale(1.08);
+    animation: kids-bounce 0.35s var(--ease-spring);
+}
+
+@keyframes kids-bounce {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1.08); }
+}
+
+.kids-tool-fill { background: linear-gradient(135deg, #FF9F43, #EE5A24); }
+.kids-tool-brush { background: linear-gradient(135deg, #0ABDE3, #48DBFB); }
+.kids-tool-eraser { background: linear-gradient(135deg, #A4B0BD, #D5D8DC); }
+.kids-tool-eyedropper { background: linear-gradient(135deg, #6C5CE7, #A29BFE); }
+.kids-tool-sticker { background: linear-gradient(135deg, #FDA7DF, #E056A0); }
+
+/* Tooltip on hover */
+.kids-tool-bubble[aria-label]::after {
+    content: attr(aria-label);
+    position: absolute;
+    white-space: nowrap;
+    font-size: 11px; font-weight: 800;
+    color: var(--text);
+    background: var(--white);
+    padding: 4px 10px;
+    border-radius: var(--r-full);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-fast);
+}
+
+[data-hand="right"] .kids-tool-bubble[aria-label]::after { left: calc(100% + 10px); }
+[data-hand="left"] .kids-tool-bubble[aria-label]::after { right: calc(100% + 10px); }
+
+.kids-tool-bubble:hover::after { opacity: 1; }
+
+/* --- KIDS: Color rainbow (bottom center) --- */
+#kids-colors {
+    position: fixed;
+    bottom: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    display: flex; align-items: flex-end; gap: 6px;
+    padding: 10px 18px 12px;
+    border-radius: var(--r-xl);
+}
+
+.kids-color-swatch {
+    width: 46px; height: 46px;
+    border-radius: var(--r-full);
+    border: 3px solid rgba(255,255,255,0.9);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-spring);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-color-swatch:hover { transform: scale(1.15) translateY(-4px); }
+
+.kids-color-swatch.active {
+    transform: scale(1.2) translateY(-8px);
+    border-color: white;
+    box-shadow: 0 0 0 3px var(--text), 0 6px 20px rgba(0,0,0,0.25);
+    animation: kids-bounce 0.35s var(--ease-spring);
+}
+
+.kids-color-swatch:focus-visible {
+    outline: 3px solid var(--text);
+    outline-offset: 3px;
+}
+
+/* Screen reader: announce color name */
+.kids-color-swatch[aria-label] { }
+
+/* Lightness controls */
+.kids-lightness-controls {
+    display: flex; flex-direction: column; gap: 4px; margin-left: 6px;
+}
+
+.kids-lightness-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--r-full);
+    border: 2.5px solid rgba(255,255,255,0.9);
+    cursor: pointer;
+    font-size: 16px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-family: var(--font);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-lightness-btn:hover { transform: scale(1.1); }
+.kids-lightness-btn:active { transform: scale(0.93); }
+
+.kids-lighter-btn { background: linear-gradient(135deg, #FFF9C4, #FFECB3); color: #F57F17; }
+.kids-darker-btn { background: linear-gradient(135deg, #5D4037, #3E2723); color: #FFCC80; }
+
+
+/* --- KIDS: Undo bar — handedness aware --- */
+#kids-undo-bar {
+    position: fixed;
+    top: 14px;
+    z-index: 100;
+    display: flex; gap: 8px;
+}
+
+[data-hand="right"] #kids-undo-bar { right: 14px; }
+[data-hand="left"] #kids-undo-bar { left: 14px; }
+
+.kids-undo-bubble {
+    width: 52px; height: 52px;
+    border-radius: var(--r-full);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    transition: all var(--t-fast);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-undo-bubble:hover { transform: scale(1.08); }
+.kids-undo-bubble:active { transform: scale(0.92); }
+
+
+/* --- KIDS: Size bubbles — handedness aware --- */
+#kids-size-bubbles {
+    position: fixed;
+    bottom: 14px;
+    z-index: 100;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 10px 8px;
+    border-radius: var(--r-xl);
+}
+
+[data-hand="right"] #kids-size-bubbles { left: 12px; }
+[data-hand="left"] #kids-size-bubbles { right: 12px; }
+
+.kids-size-dot {
+    border-radius: var(--r-full);
+    border: none; cursor: pointer;
+    transition: all var(--t-fast);
+    display: block;
+    background: var(--text);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-size-dot:hover { transform: scale(1.15); }
+
+.kids-size-dot.active {
+    box-shadow: 0 0 0 3px var(--accent), 0 0 12px var(--accent-glow);
+}
+
+.kids-size-sm { width: 14px; height: 14px; }
+.kids-size-md { width: 22px; height: 22px; }
+.kids-size-lg { width: 32px; height: 32px; }
+
+
+/* --- KIDS: Sticker tray --- */
+#kids-sticker-tray {
+    position: fixed;
+    bottom: 90px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    display: none; gap: 8px;
+    padding: 10px 16px;
+    border-radius: var(--r-xl);
+}
+
+#kids-sticker-tray.open {
+    display: flex;
+    animation: pop-up 0.3s var(--ease-spring);
+}
+
+@keyframes pop-up {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.9); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.kids-sticker {
+    width: 52px; height: 52px;
+    border-radius: var(--r-md);
+    border: none;
+    background: var(--surface-hover);
+    cursor: pointer; font-size: 30px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-sticker:hover { transform: scale(1.15); background: var(--surface-active); }
+.kids-sticker:active { transform: scale(0.9); }
+
+
+/* --- KIDS: Gallery button --- */
+#kids-gallery-btn {
+    position: fixed;
+    z-index: 100;
+}
+
+[data-hand="right"] #kids-gallery-btn { top: 14px; left: 14px; }
+[data-hand="left"] #kids-gallery-btn { top: 14px; right: 14px; }
+
+/* Nudge it when completion ring is there */
+[data-hand="right"] #kids-gallery-btn { left: 78px; }
+[data-hand="left"] #kids-gallery-btn { right: 78px; }
+
+.kids-gallery-bubble {
+    width: 52px; height: 52px;
+    border-radius: var(--r-full);
+    border: none;
+    background: linear-gradient(135deg, #10AC84, #1DD1A1);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--shadow-tool);
+    transition: all var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-gallery-bubble:hover { transform: scale(1.08); }
+
+
+/* --- KIDS: Save + hand switch --- */
+#kids-save-btn {
+    position: fixed;
+    top: 14px;
+    z-index: 100;
+}
+
+[data-hand="right"] #kids-save-btn { left: 138px; }
+[data-hand="left"] #kids-save-btn { right: 138px; }
+
+.kids-save-bubble {
+    width: 52px; height: 52px;
+    border-radius: var(--r-full);
+    border: none;
+    background: linear-gradient(135deg, #0ABDE3, #48DBFB);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--shadow-tool);
+    transition: all var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-save-bubble:hover { transform: scale(1.08); }
+
+/* Handedness toggle button */
+#hand-toggle {
+    position: fixed;
+    bottom: 80px;
+    z-index: 100;
+    width: 44px; height: 44px;
+    border-radius: var(--r-full);
+    border: none; cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.05);
+    color: var(--text-muted);
+    transition: all var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-hand="right"] #hand-toggle { right: 12px; }
+[data-hand="left"] #hand-toggle { left: 12px; }
+
+[data-theme="dark"] #hand-toggle { background: rgba(255,255,255,0.06); }
+#hand-toggle:hover { transform: scale(1.08); background: rgba(0,0,0,0.08); }
+
+[data-mode="studio"] #hand-toggle { display: none; }
+
+
+/* =============================================
+   ====  S T U D I O   M O D E  ====
+   Ghost UI, gestural, radial, glass
+   ============================================= */
+
+/* --- STUDIO: Dock --- */
+#dock {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: var(--r-full);
+    cursor: pointer;
+    transition: all 0.3s var(--ease-spring);
+}
+
+#dock:hover { transform: translateX(-50%) scale(1.04); box-shadow: var(--shadow-float), var(--shadow-glow); }
+
+.dock-tool-icon { width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--accent); display: flex; align-items: center; justify-content: center; }
+.dock-tool-icon svg { width: 18px; height: 18px; fill: white; }
+.dock-color { width: 24px; height: 24px; border-radius: var(--r-full); border: 2.5px solid var(--glass-border); }
+.dock-size { width: 36px; height: 4px; border-radius: 2px; background: var(--text-muted); position: relative; overflow: hidden; }
+.dock-size-fill { position: absolute; left: 0; top: 0; height: 100%; width: 40%; background: var(--accent); border-radius: 2px; }
+.dock-hint { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; margin-left: 2px; }
+
+/* First-use pulse on dock */
+#dock.first-use::after {
+    content: '';
+    position: absolute; inset: -6px;
+    border-radius: var(--r-full);
+    border: 2px solid var(--accent);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.15); }
+}
+
+/* --- STUDIO: Radial menu --- */
+#radial-menu {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 99; display: none; align-items: flex-end; justify-content: center;
+}
+#radial-menu.open { display: flex; }
+
+.radial-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.12);
+    z-index: 98; display: none;
+    animation: fade-in 0.2s ease;
+}
+.radial-backdrop.open { display: block; }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.radial-arc { display: flex; gap: 10px; align-items: flex-end; padding: 0 10px; }
+.radial-tool {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer;
+    transition: transform 0.2s var(--ease-spring);
+    animation: radial-pop 0.35s var(--ease-spring) both;
+}
+
+.radial-tool:nth-child(1) { animation-delay: 0ms; }
+.radial-tool:nth-child(2) { animation-delay: 25ms; }
+.radial-tool:nth-child(3) { animation-delay: 50ms; }
+.radial-tool:nth-child(4) { animation-delay: 75ms; }
+.radial-tool:nth-child(5) { animation-delay: 100ms; }
+.radial-tool:nth-child(6) { animation-delay: 125ms; }
+.radial-tool:nth-child(7) { animation-delay: 150ms; }
+.radial-tool:nth-child(8) { animation-delay: 175ms; }
+.radial-tool:nth-child(9) { animation-delay: 200ms; }
+
+@keyframes radial-pop { from { opacity: 0; transform: translateY(16px) scale(0.7); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.radial-tool:hover { transform: translateY(-4px) scale(1.06); }
+
+.radial-tool-btn {
+    width: 54px; height: 54px;
+    border-radius: var(--r-md); border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast) ease;
+}
+.radial-tool-btn svg { width: 24px; height: 24px; fill: var(--text-on-glass); }
+.radial-tool-btn.active { background: var(--accent) !important; border-color: var(--accent) !important; box-shadow: var(--shadow-glow); }
+.radial-tool-btn.active svg { fill: white; }
+.radial-tool-label { font-size: 10px; font-weight: 700; color: var(--text-soft); }
+.radial-section { display: flex; gap: 8px; align-items: flex-end; }
+.radial-divider { width: 1px; height: 40px; background: var(--glass-border); margin: 0 6px; align-self: center; }
+
+
+/* --- STUDIO: Quick actions, undo/redo, zoom --- */
+#quick-actions { position: fixed; top: 14px; left: 20px; z-index: 80; display: flex; gap: 6px; }
+.quick-btn { width: 40px; height: 40px; border-radius: var(--r-full); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 17px; color: var(--text-soft); transition: all var(--t-fast); }
+.quick-btn:hover { transform: scale(1.08); }
+
+#undo-redo { position: fixed; top: 14px; right: 102px; z-index: 80; display: flex; gap: 6px; }
+.undo-btn { width: 40px; height: 40px; border-radius: var(--r-full); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--t-fast); }
+.undo-btn:hover { transform: scale(1.08); }
+.undo-btn:active { transform: scale(0.95); }
+.undo-btn svg { width: 18px; height: 18px; fill: var(--text-soft); }
+
+.undo-dots { position: fixed; top: 60px; right: 112px; display: flex; gap: 3px; z-index: 80; }
+.undo-dot { width: 5px; height: 5px; border-radius: var(--r-full); background: rgba(0,0,0,0.1); transition: background 0.2s; }
+[data-theme="dark"] .undo-dot { background: rgba(255,255,255,0.1); }
+.undo-dot.filled { background: var(--accent); }
+
+#gesture-bar { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 79; display: flex; align-items: center; gap: 16px; padding: 8px 18px; border-radius: var(--r-full); font-size: 11px; font-weight: 700; color: var(--text-soft); }
+.gesture-item { display: flex; align-items: center; gap: 5px; opacity: 0.7; }
+.gesture-key { padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,0.06); font-size: 10px; font-weight: 800; color: var(--text); }
+[data-theme="dark"] .gesture-key { background: rgba(255,255,255,0.08); }
+
+#zoom-pill { position: fixed; bottom: 20px; left: 20px; z-index: 80; display: flex; align-items: center; gap: 2px; padding: 5px 6px; border-radius: var(--r-full); font-size: 12px; font-weight: 700; color: var(--text-soft); }
+.zoom-btn { width: 26px; height: 26px; border: none; background: none; border-radius: var(--r-full); color: var(--text-soft); font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.zoom-btn:hover { background: var(--surface-hover); }
+.zoom-value { min-width: 36px; text-align: center; font-weight: 800; }
+
+
+/* --- STUDIO: Color River --- */
+#color-river { position: fixed; top: 0; right: -320px; width: 300px; height: 100%; z-index: 90; padding: 24px 20px; display: flex; flex-direction: column; transition: right var(--t-slow) var(--ease-out); overflow-y: auto; }
+#color-river.open { right: 0; }
+
+.river-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.river-title { font-size: 20px; font-weight: 800; color: var(--text); }
+.river-close { width: 32px; height: 32px; border-radius: var(--r-full); border: none; background: var(--surface-hover); color: var(--text-soft); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.river-close:hover { background: var(--surface-active); }
+
+.river-preview { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 12px 16px; border-radius: var(--r-lg); background: var(--surface-hover); }
+.river-preview-swatch { width: 52px; height: 52px; border-radius: var(--r-md); border: 3px solid var(--white); box-shadow: var(--shadow-float); flex-shrink: 0; }
+.river-preview-hex { font-size: 18px; font-weight: 800; color: var(--text); font-family: 'Courier New', monospace; }
+.river-preview-name { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+.river-wheel-wrap { width: 100%; aspect-ratio: 1; max-width: 240px; margin: 0 auto 18px; position: relative; }
+.river-hue-ring { width: 100%; height: 100%; border-radius: var(--r-full); background: conic-gradient(hsl(0,100%,50%),hsl(30,100%,50%),hsl(60,100%,50%),hsl(90,100%,50%),hsl(120,100%,50%),hsl(150,100%,50%),hsl(180,100%,50%),hsl(210,100%,50%),hsl(240,100%,50%),hsl(270,100%,50%),hsl(300,100%,50%),hsl(330,100%,50%),hsl(360,100%,50%)); padding: 28px; position: relative; }
+.river-hue-selector { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 14px; height: 24px; background: white; border: 3px solid var(--text); border-radius: 7px; box-shadow: var(--shadow-float); z-index: 2; cursor: pointer; }
+.river-sl-area { position: absolute; inset: 28px; border-radius: var(--r-full); overflow: hidden; background: white; }
+.river-sl-gradient { width: 100%; height: 100%; border-radius: var(--r-full); background: linear-gradient(to right, white, hsl(15,100%,50%)); position: relative; }
+.river-sl-gradient::after { content: ''; position: absolute; inset: 0; border-radius: var(--r-full); background: linear-gradient(to bottom, transparent, black); }
+.river-sl-cursor { position: absolute; top: 30%; left: 62%; width: 16px; height: 16px; border-radius: var(--r-full); border: 3px solid white; box-shadow: 0 0 0 1.5px rgba(0,0,0,0.3), var(--shadow-float); transform: translate(-50%, -50%); z-index: 3; cursor: pointer; }
+
+.river-lightness { margin-bottom: 18px; }
+.river-lightness-label { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.river-lightness-label span { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.river-lightness-track { width: 100%; height: 16px; border-radius: var(--r-full); background: linear-gradient(to right, #1a0a00, hsl(15,80%,50%), #fff5ee); position: relative; cursor: pointer; }
+.river-lightness-thumb { position: absolute; top: 50%; left: 60%; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: var(--r-full); background: white; border: 3px solid var(--text); box-shadow: var(--shadow-float); cursor: pointer; }
+
+/* Eyedropper button in color river */
+.river-eyedropper-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; margin-bottom: 16px;
+    border-radius: var(--r-full);
+    border: 2px dashed var(--glass-border);
+    background: none; cursor: pointer;
+    font-family: var(--font); font-size: 13px; font-weight: 700;
+    color: var(--text-soft);
+    transition: all var(--t-fast);
+    width: 100%;
+    justify-content: center;
+}
+
+.river-eyedropper-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-surface); }
+
+.river-section-title { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+
+.river-swatch-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.river-swatch { width: 36px; height: 36px; border-radius: var(--r-sm); border: 2.5px solid transparent; cursor: pointer; transition: all var(--t-fast) ease; }
+.river-swatch:hover { transform: scale(1.12); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.river-swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px white, 0 0 0 4px var(--text); transform: scale(1.08); }
+
+/* Color family labels */
+.river-family-label {
+    font-size: 9px; font-weight: 800; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-top: 4px; margin-bottom: 4px;
+    padding-left: 2px;
+}
+
+.river-recent { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.river-recent-swatch { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; transition: transform var(--t-fast); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.river-recent-swatch:hover { transform: scale(1.15); }
+
+/* Pinned favorites */
+.river-pinned { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.river-pinned-swatch {
+    width: 32px; height: 32px;
+    border-radius: 8px; cursor: pointer;
+    transition: transform var(--t-fast);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    position: relative;
+}
+.river-pinned-swatch::after {
+    content: '📌';
+    position: absolute; top: -6px; right: -6px;
+    font-size: 10px;
+}
+.river-pinned-swatch:hover { transform: scale(1.12); }
+
+
+/* --- STUDIO: Layer drawer --- */
+#layer-drawer { position: fixed; top: 0; left: -340px; width: 320px; height: 100%; z-index: 90; padding: 24px 16px; display: flex; flex-direction: column; transition: left var(--t-slow) var(--ease-out); overflow-y: auto; }
+#layer-drawer.open { left: 0; }
+
+.layer-drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.layer-drawer-title { font-size: 20px; font-weight: 800; color: var(--text); }
+.layer-drawer-actions { display: flex; gap: 6px; }
+.layer-action-btn { width: 36px; height: 36px; border-radius: var(--r-sm); border: none; background: var(--surface-hover); color: var(--text-soft); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background var(--t-fast); }
+.layer-action-btn:hover { background: var(--surface-active); }
+
+.layer-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--r-md); margin-bottom: 8px; cursor: pointer; transition: all 0.2s ease; background: var(--surface-hover); border: 2px solid transparent; }
+.layer-card:hover { background: var(--surface-active); }
+.layer-card.active { background: var(--accent-surface); border-color: var(--accent); }
+.layer-card-thumb { width: 48px; height: 48px; border-radius: var(--r-sm); background: white; border: 1.5px solid rgba(0,0,0,0.08); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+[data-theme="dark"] .layer-card-thumb { background: rgba(255,255,255,0.08); }
+.layer-card-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.layer-card-meta { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.layer-vis-btn { width: 30px; height: 30px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: 16px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: background var(--t-fast); }
+.layer-vis-btn:hover { background: var(--surface-hover); }
+
+.layer-opacity-bar { padding: 12px; margin-top: 4px; border-radius: var(--r-md); background: var(--surface-hover); }
+.layer-opacity-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.layer-opacity-title { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+.layer-opacity-value { font-size: 13px; font-weight: 800; color: var(--accent); }
+.layer-opacity-track { width: 100%; height: 8px; border-radius: var(--r-full); background: rgba(0,0,0,0.08); position: relative; }
+.layer-opacity-fill { height: 100%; width: 100%; border-radius: var(--r-full); background: var(--accent); }
+.layer-opacity-thumb { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: var(--r-full); background: white; border: 3px solid var(--accent); box-shadow: var(--shadow-float); }
+
+
+/* --- STUDIO: Edge triggers --- */
+.edge-trigger { position: fixed; z-index: 50; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity 0.3s; }
+.edge-trigger:hover { opacity: 1; }
+.edge-trigger-left { top: 50%; left: 0; transform: translateY(-50%); width: 24px; height: 120px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.edge-trigger-right { top: 50%; right: 0; transform: translateY(-50%); width: 24px; height: 120px; border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.edge-trigger-icon { font-size: 12px; color: var(--text-muted); font-weight: 800; }
+
+
+/* --- STUDIO: Floating widgets --- */
+#size-ring { position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%); z-index: 95; display: none; align-items: center; gap: 12px; padding: 10px 20px; border-radius: var(--r-full); }
+#size-ring.open { display: flex; animation: pop-up-center 0.25s var(--ease-spring); }
+
+@keyframes pop-up-center { from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.95); } to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); } }
+
+.size-ring-track { width: 140px; height: 6px; border-radius: var(--r-full); background: rgba(0,0,0,0.08); position: relative; }
+.size-ring-fill { position: absolute; left: 0; top: 0; height: 100%; width: 40%; border-radius: var(--r-full); background: var(--accent); }
+.size-ring-thumb { position: absolute; left: 40%; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: var(--r-full); background: white; border: 3px solid var(--accent); box-shadow: var(--shadow-float); }
+.size-ring-preview { width: 16px; height: 16px; border-radius: var(--r-full); flex-shrink: 0; }
+.size-ring-value { font-size: 14px; font-weight: 800; color: var(--text); min-width: 24px; text-align: center; }
+
+#preset-strip { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); z-index: 95; display: none; gap: 8px; padding: 8px 14px; border-radius: var(--r-full); }
+#preset-strip.open { display: flex; animation: pop-up-center 0.3s var(--ease-spring); }
+.preset-chip { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 10px; border-radius: var(--r-sm); border: 2px solid transparent; cursor: pointer; background: none; min-width: 48px; font-family: var(--font); transition: all var(--t-fast); }
+.preset-chip:hover { background: var(--surface-hover); }
+.preset-chip.active { border-color: var(--accent); background: var(--accent-surface); }
+.preset-chip-icon { font-size: 20px; }
+.preset-chip-name { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+
+
+/* =============================================
+   REFERENCE IMAGE PANEL — floating, draggable, resizable
+   Kids: simple rounded picture frame
+   Studio: full panel with controls
+   ============================================= */
+#ref-panel {
+    position: fixed;
+    z-index: 120;
+    transition: box-shadow var(--t-fast), border-color var(--t-fast);
+    animation: ref-panel-in 0.35s var(--ease-spring);
+}
+
+@keyframes ref-panel-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* --- KIDS: Simple picture frame --- */
+[data-mode="kids"] #ref-panel {
+    top: 80px; right: 14px;
+    width: 140px; height: 140px;
+    border-radius: var(--r-lg);
+    border: 4px solid var(--info);
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+}
+
+[data-mode="kids"] #ref-panel .ref-handle,
+[data-mode="kids"] #ref-panel .ref-controls,
+[data-mode="kids"] #ref-panel .ref-resize {
+    display: none;
+}
+
+[data-mode="kids"] #ref-panel .ref-body {
+    width: 100%; height: 100%;
+    border-radius: calc(var(--r-lg) - 4px);
+}
+
+[data-mode="kids"] #ref-panel .ref-close-kids {
+    display: flex;
+}
+
+/* Kids: close badge */
+.ref-close-kids {
+    display: none;
+    position: absolute; top: -8px; right: -8px;
+    width: 28px; height: 28px;
+    border-radius: var(--r-full);
+    border: 2px solid white;
+    background: var(--danger);
+    color: white;
+    font-size: 14px; font-weight: 900;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 5;
+    transition: transform var(--t-fast);
+}
+
+.ref-close-kids:hover { transform: scale(1.15); }
+
+/* Handedness positioning in kids mode */
+[data-hand="right"][data-mode="kids"] #ref-panel { right: 14px; left: auto; }
+[data-hand="left"][data-mode="kids"] #ref-panel { left: 14px; right: auto; }
+
+/* --- STUDIO: Full floating panel with controls --- */
+[data-mode="studio"] #ref-panel {
+    top: 80px; left: 20px;
+    width: 220px; height: 200px;
+    border-radius: var(--r-md);
+    border: 2px solid var(--info);
+    overflow: visible;
+    box-shadow: var(--shadow-float);
+    display: flex; flex-direction: column;
+}
+
+[data-mode="studio"] #ref-panel .ref-close-kids { display: none; }
+
+/* Handle bar — draggable */
+.ref-handle {
+    height: 32px;
+    background: var(--info);
+    border-radius: calc(var(--r-md) - 2px) calc(var(--r-md) - 2px) 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px 0 12px;
+    cursor: grab;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.ref-handle:active { cursor: grabbing; }
+
+.ref-handle-title {
+    font-size: 12px; font-weight: 800;
+    color: white;
+    letter-spacing: 0.3px;
+    display: flex; align-items: center; gap: 6px;
+}
+
+.ref-handle-title span { font-size: 14px; }
+
+.ref-handle-btns { display: flex; gap: 4px; }
+
+.ref-handle-btn {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255,255,255,0.18);
+    color: white;
+    font-size: 13px; font-weight: 800;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background var(--t-fast);
+}
+
+.ref-handle-btn:hover { background: rgba(255,255,255,0.3); }
+
+/* Body — the image area */
+.ref-body {
+    flex: 1;
+    background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+[data-theme="dark"] .ref-body { background: #1a1a2e; }
+
+.ref-body svg, .ref-body img {
+    width: 80%; height: 80%;
+    object-fit: contain;
+}
+
+/* User-loaded image */
+.ref-body img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* ---- Empty state / drop zone ---- */
+.ref-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+    cursor: pointer;
+    transition: background var(--t-fast);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ref-empty:hover { background: rgba(0,0,0,0.03); }
+[data-theme="dark"] .ref-empty:hover { background: rgba(255,255,255,0.03); }
+
+/* Kids empty state — big colorful + icon */
+[data-mode="kids"] .ref-empty .ref-empty-studio { display: none; }
+[data-mode="studio"] .ref-empty .ref-empty-kids { display: none; }
+
+.ref-empty-kids {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px;
+}
+
+.ref-empty-kids-icon {
+    width: 56px; height: 56px;
+    border-radius: var(--r-full);
+    background: linear-gradient(135deg, var(--info), #48DBFB);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 4px 14px rgba(10,189,227,0.3);
+    animation: gentle-bounce 2s ease-in-out infinite;
+}
+
+@keyframes gentle-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* Studio empty state — drop zone */
+.ref-empty-studio {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 12px;
+    margin: 8px;
+    border: 2px dashed var(--text-muted);
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast);
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+}
+
+.ref-empty:hover .ref-empty-studio {
+    border-color: var(--info);
+    background: rgba(10,189,227,0.04);
+}
+
+/* Drag-over highlight */
+.ref-empty-studio.dragover {
+    border-color: var(--info);
+    background: rgba(10,189,227,0.1);
+    border-style: solid;
+}
+
+.ref-empty-studio-icon { font-size: 24px; opacity: 0.6; }
+
+.ref-empty-studio-text {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.ref-empty-studio-hint {
+    font-size: 9px; font-weight: 600;
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* ---- Loaded state: replace button overlay ---- */
+.ref-replace-btn {
+    position: absolute;
+    bottom: 6px; right: 6px;
+    width: 30px; height: 30px;
+    border-radius: var(--r-full);
+    border: 2px solid white;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity var(--t-fast);
+    z-index: 3;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.ref-body:hover .ref-replace-btn { opacity: 1; }
+.ref-replace-btn:hover { background: rgba(0,0,0,0.7); transform: scale(1.08); }
+
+/* Kids mode: replace button is bigger, always slightly visible */
+[data-mode="kids"] .ref-replace-btn {
+    width: 34px; height: 34px;
+    font-size: 16px;
+    opacity: 0.6;
+    bottom: 4px; right: 4px;
+}
+
+[data-mode="kids"] .ref-body:hover .ref-replace-btn { opacity: 1; }
+
+/* Controls bar — opacity, pin, flip */
+.ref-controls {
+    height: 36px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-top: 1px solid var(--glass-border);
+    border-radius: 0 0 calc(var(--r-md) - 2px) calc(var(--r-md) - 2px);
+    display: flex; align-items: center;
+    padding: 0 8px;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ref-opacity-label {
+    font-size: 9px; font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ref-opacity-slider {
+    flex: 1;
+    height: 4px;
+    accent-color: var(--info);
+    cursor: pointer;
+    min-width: 50px;
+}
+
+.ref-opacity-value {
+    font-size: 10px; font-weight: 800;
+    color: var(--text-soft);
+    min-width: 28px; text-align: right;
+}
+
+.ref-ctrl-btn {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+}
+
+.ref-ctrl-btn:hover { background: var(--surface-hover); color: var(--text-soft); }
+.ref-ctrl-btn.pinned { color: var(--info); }
+
+/* Resize handle — bottom-right corner */
+.ref-resize {
+    position: absolute;
+    right: 0; bottom: 0;
+    width: 18px; height: 18px;
+    cursor: nwse-resize;
+    z-index: 3;
+    border-radius: 0 0 calc(var(--r-md) - 2px) 0;
+    background:
+        linear-gradient(135deg, transparent 50%, var(--info) 50%),
+        linear-gradient(135deg, transparent 65%, rgba(255,255,255,0.4) 65%);
+}
+
+/* Collapsed pip state */
+#ref-panel.collapsed {
+    width: 48px !important; height: 48px !important;
+    border-radius: var(--r-full) !important;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+#ref-panel.collapsed .ref-handle,
+#ref-panel.collapsed .ref-controls,
+#ref-panel.collapsed .ref-resize,
+#ref-panel.collapsed .ref-close-kids {
+    display: none;
+}
+
+#ref-panel.collapsed .ref-body {
+    border-radius: var(--r-full);
+}
+
+/* Collapsed pip badge */
+.ref-pip-badge {
+    display: none;
+    position: absolute; inset: 0;
+    align-items: center; justify-content: center;
+    font-size: 22px;
+    background: var(--info);
+    color: white;
+    border-radius: var(--r-full);
+}
+
+#ref-panel.collapsed .ref-pip-badge { display: flex; }
+#ref-panel.collapsed .ref-body { display: none; }
+
+/* Phone: smaller default, snap to corner */
+@media (max-width: 480px) {
+    [data-mode="kids"] #ref-panel { width: 100px; height: 100px; }
+    [data-mode="studio"] #ref-panel { width: 160px; height: 160px; }
+}
+
+
+/* Toast */
+.toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 200;
+    padding: 10px 24px; border-radius: var(--r-full);
+    font-size: 14px; font-weight: 700;
+    color: white; background: var(--text);
+    box-shadow: var(--shadow-deep);
+    animation: toast-up 0.3s var(--ease-spring);
+    pointer-events: none;
+}
+
+@keyframes toast-up { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+/* Tablet portrait */
+@media (max-width: 768px) {
+    .canvas-paper {
+        width: min(80vw, 50vh) !important;
+        height: min(80vw, 50vh) !important;
+    }
+    #color-river { width: 280px; right: -300px; }
+    #layer-drawer { width: 280px; left: -300px; }
+    .kids-tool-bubble { width: 58px; height: 58px; font-size: 25px; }
+    .radial-tool-btn { width: 48px; height: 48px; }
+    #gesture-bar { display: none; }
+}
+
+/* Phone */
+@media (max-width: 480px) {
+    #color-river { width: 100%; right: -100%; }
+    #color-river.open { right: 0; }
+    #layer-drawer { width: 100%; left: -100%; }
+    #layer-drawer.open { left: 0; }
+    .kids-tool-bubble { width: 52px; height: 52px; font-size: 22px; }
+    .kids-color-swatch { width: 38px; height: 38px; }
+    .kids-lightness-btn { width: 30px; height: 30px; font-size: 13px; }
+    .canvas-paper {
+        width: min(88vw, 45vh) !important;
+        height: min(88vw, 45vh) !important;
+    }
+    #mode-switch { top: 8px; }
+    #top-bar { top: 8px; right: 8px; }
+    #kids-undo-bar { top: 8px; }
+    .kids-undo-bubble { width: 44px; height: 44px; font-size: 20px; }
+    .radial-tool-btn { width: 44px; height: 44px; }
+    .radial-tool-label { font-size: 9px; }
+    .radial-arc { gap: 6px; }
+    .radial-section { gap: 5px; }
+}
+
+/* Desktop / large screens */
+@media (min-width: 1200px) {
+    .canvas-paper {
+        width: min(50vw, 70vh) !important;
+        height: min(50vw, 70vh) !important;
+    }
+}
+    </style>
+</head>
+<body data-mode="kids">
+
+<!-- Screen reader live region for announcements -->
+<div id="sr-announce" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- Confetti container -->
+<div class="confetti-container" id="confetti-container" aria-hidden="true"></div>
+
+
+<!-- =============================================
+     CANVAS
+     ============================================= -->
+<div id="canvas-world">
+    <div class="canvas-artwork">
+        <div class="canvas-paper">
+            <svg viewBox="0 0 200 200" fill="none" stroke-linecap="round">
+                <!-- Butterfly with partial coloring -->
+                <path d="M100,45 C82,32 45,18 28,58 C15,95 48,122 72,112 C82,107 92,96 100,102" fill="rgba(255,150,180,0.35)" stroke="#888" stroke-width="1.8"/>
+                <path d="M100,45 C118,32 155,18 172,58 C185,95 152,122 128,112 C118,107 108,96 100,102" fill="rgba(150,200,255,0.35)" stroke="#888" stroke-width="1.8"/>
+                <circle cx="62" cy="58" r="14" fill="rgba(255,220,100,0.4)" stroke="#aaa" stroke-width="1.2"/>
+                <circle cx="138" cy="58" r="14" fill="rgba(180,255,180,0.4)" stroke="#aaa" stroke-width="1.2"/>
+                <circle cx="52" cy="88" r="9" fill="rgba(200,180,255,0.4)" stroke="#aaa" stroke-width="1.2"/>
+                <circle cx="148" cy="88" r="9" fill="rgba(255,200,150,0.4)" stroke="#aaa" stroke-width="1.2"/>
+                <ellipse cx="100" cy="75" rx="6" ry="30" fill="rgba(120,80,60,0.5)" stroke="#777" stroke-width="1.5"/>
+                <circle cx="100" cy="40" r="8" fill="rgba(120,80,60,0.5)" stroke="#777" stroke-width="1.5"/>
+                <circle cx="97" cy="38" r="2" fill="#555"/>
+                <circle cx="103" cy="38" r="2" fill="#555"/>
+                <path d="M94,33 C88,18 82,10 76,4" stroke="#888" stroke-width="1.2" fill="none"/>
+                <path d="M106,33 C112,18 118,10 124,4" stroke="#888" stroke-width="1.2" fill="none"/>
+                <circle cx="76" cy="4" r="3" fill="rgba(255,111,0,0.5)" stroke="#aaa" stroke-width="1"/>
+                <circle cx="124" cy="4" r="3" fill="rgba(255,111,0,0.5)" stroke="#aaa" stroke-width="1"/>
+                <path d="M97,90 C88,115 78,145 74,162" stroke="#999" stroke-width="1" fill="none"/>
+                <path d="M103,90 C112,115 122,145 126,162" stroke="#999" stroke-width="1" fill="none"/>
+            </svg>
+        </div>
+    </div>
+</div>
+
+
+<!-- =============================================
+     MODE SWITCH
+     ============================================= -->
+<div id="mode-switch" class="glass" role="tablist" aria-label="Interface mode">
+    <button class="mode-option active" id="mode-kids" onclick="setMode('kids')" role="tab" aria-selected="true" aria-controls="kids-ui">
+        <span>&#x1F476;</span> Kids
+    </button>
+    <button class="mode-option" id="mode-studio" onclick="setMode('studio')" role="tab" aria-selected="false" aria-controls="studio-ui">
+        <span>&#x1F3A8;</span> Studio
+    </button>
+</div>
+
+
+<!-- =============================================
+     TOP BAR — theme + sound + settings
+     ============================================= -->
+<div id="top-bar">
+    <button class="top-btn glass sound-on" id="sound-toggle" onclick="toggleSound()" aria-label="Sound effects: on" title="Toggle sounds">&#x1F50A;</button>
+    <button class="top-btn glass" onclick="toggleTheme()" aria-label="Toggle dark mode" title="Toggle theme">&#x1F319;</button>
+</div>
+
+
+<!-- =============================================
+     COMPLETION PROGRESS RING (kids mode)
+     ============================================= -->
+<div id="completion-ring" aria-label="Coloring progress: 42%">
+    <div class="completion-ring-bg" onclick="showToast('42% colored! Keep going! 🎨')" title="Coloring progress">
+        <svg viewBox="0 0 44 44">
+            <circle class="completion-track" cx="22" cy="22" r="18"/>
+            <circle class="completion-fill" cx="22" cy="22" r="18"
+                stroke-dasharray="113.1"
+                stroke-dashoffset="65.6"/>
+        </svg>
+        <span class="completion-icon">&#x1F5BC;</span>
+        <span class="completion-pct">42%</span>
+    </div>
+</div>
+
+
+<!-- =============================================
+     === KIDS MODE UI ===
+     ============================================= -->
+
+<!-- Kids: Gallery button -->
+<div id="kids-gallery-btn">
+    <button class="kids-gallery-bubble" aria-label="Open gallery" onclick="showToast('Gallery!')">&#x1F5BC;</button>
+</div>
+
+<!-- Kids: Save button -->
+<div id="kids-save-btn">
+    <button class="kids-save-bubble" aria-label="Save drawing" onclick="kidsAction('Saved! 💾')">&#x1F4BE;</button>
+</div>
+
+<!-- Kids: Reference guide button -->
+<div id="kids-ref-btn" style="position:fixed; top:14px; z-index:100;">
+    <button class="kids-save-bubble" aria-label="Picture guide" onclick="openRefPanel()" style="background: linear-gradient(135deg, #6C5CE7, #A29BFE);">&#x1F5BC;</button>
+</div>
+<style>
+    [data-hand="right"] #kids-ref-btn { left: 198px; }
+    [data-hand="left"] #kids-ref-btn { right: 198px; }
+    [data-mode="studio"] #kids-ref-btn { display: none !important; }
+</style>
+
+<!-- Kids: Tool bubbles -->
+<div id="kids-tools" role="toolbar" aria-label="Drawing tools">
+    <button class="kids-tool-bubble kids-tool-fill active" onclick="kidsSelectTool(this, 'fill')" aria-label="Fill color" aria-pressed="true">&#x1F3A8;</button>
+    <button class="kids-tool-bubble kids-tool-brush" onclick="kidsSelectTool(this, 'brush')" aria-label="Paint brush" aria-pressed="false">&#x1F58C;&#xFE0F;</button>
+    <button class="kids-tool-bubble kids-tool-eraser" onclick="kidsSelectTool(this, 'eraser')" aria-label="Eraser" aria-pressed="false">&#x1FA79;</button>
+    <button class="kids-tool-bubble kids-tool-eyedropper" onclick="kidsSelectTool(this, 'eyedropper')" aria-label="Pick color from canvas" aria-pressed="false">&#x1F50D;</button>
+    <button class="kids-tool-bubble kids-tool-sticker" onclick="kidsToggleStickers()" aria-label="Stickers" aria-pressed="false">&#x2B50;</button>
+</div>
+
+<!-- Kids: Sticker tray -->
+<div id="kids-sticker-tray" class="glass" role="toolbar" aria-label="Stickers">
+    <button class="kids-sticker" onclick="kidsAction('Star! ⭐')" aria-label="Star sticker">&#x2B50;</button>
+    <button class="kids-sticker" onclick="kidsAction('Heart! ❤️')" aria-label="Heart sticker">&#x2764;&#xFE0F;</button>
+    <button class="kids-sticker" onclick="kidsAction('Rainbow! 🌈')" aria-label="Rainbow sticker">&#x1F308;</button>
+    <button class="kids-sticker" onclick="kidsAction('Sparkle! ✨')" aria-label="Sparkle sticker">&#x2728;</button>
+    <button class="kids-sticker" onclick="kidsAction('Flower! 🌼')" aria-label="Flower sticker">&#x1F33C;</button>
+    <button class="kids-sticker" onclick="kidsAction('Butterfly! 🦋')" aria-label="Butterfly sticker">&#x1F98B;</button>
+    <button class="kids-sticker" onclick="kidsAction('Crown! 👑')" aria-label="Crown sticker">&#x1F451;</button>
+</div>
+
+<!-- Kids: Size selection -->
+<div id="kids-size-bubbles" class="glass" role="radiogroup" aria-label="Brush size">
+    <button class="kids-size-dot kids-size-sm" onclick="kidsSelectSize(this)" aria-label="Small brush" role="radio" aria-checked="false"></button>
+    <button class="kids-size-dot kids-size-md active" onclick="kidsSelectSize(this)" aria-label="Medium brush" role="radio" aria-checked="true"></button>
+    <button class="kids-size-dot kids-size-lg" onclick="kidsSelectSize(this)" aria-label="Large brush" role="radio" aria-checked="false"></button>
+</div>
+
+<!-- Kids: Color rainbow -->
+<div id="kids-colors" class="glass" role="radiogroup" aria-label="Colors">
+    <div class="kids-color-swatch active" style="background: #FF6B6B;" onclick="kidsPickColor(this, '#FF6B6B')" role="radio" aria-checked="true" aria-label="Coral red" tabindex="0"></div>
+    <div class="kids-color-swatch" style="background: #FF9F43;" onclick="kidsPickColor(this, '#FF9F43')" role="radio" aria-checked="false" aria-label="Orange" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #FECA57;" onclick="kidsPickColor(this, '#FECA57')" role="radio" aria-checked="false" aria-label="Yellow" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #10AC84;" onclick="kidsPickColor(this, '#10AC84')" role="radio" aria-checked="false" aria-label="Green" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #48DBFB;" onclick="kidsPickColor(this, '#48DBFB')" role="radio" aria-checked="false" aria-label="Sky blue" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #0ABDE3;" onclick="kidsPickColor(this, '#0ABDE3')" role="radio" aria-checked="false" aria-label="Blue" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #6C5CE7;" onclick="kidsPickColor(this, '#6C5CE7')" role="radio" aria-checked="false" aria-label="Purple" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #FDA7DF;" onclick="kidsPickColor(this, '#FDA7DF')" role="radio" aria-checked="false" aria-label="Pink" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #5D4037;" onclick="kidsPickColor(this, '#5D4037')" role="radio" aria-checked="false" aria-label="Brown" tabindex="-1"></div>
+    <div class="kids-color-swatch" style="background: #2C3A47;" onclick="kidsPickColor(this, '#2C3A47')" role="radio" aria-checked="false" aria-label="Dark gray" tabindex="-1"></div>
+    <!-- Lightness controls -->
+    <div class="kids-lightness-controls">
+        <button class="kids-lightness-btn kids-lighter-btn" onclick="kidsLighten()" aria-label="Make color lighter">☀</button>
+        <button class="kids-lightness-btn kids-darker-btn" onclick="kidsDarken()" aria-label="Make color darker">🌙</button>
+    </div>
+</div>
+
+<!-- Kids: Undo bar -->
+<div id="kids-undo-bar" role="toolbar" aria-label="Undo and redo">
+    <button class="kids-undo-bubble glass" onclick="showToast('Undo! ↩️')" aria-label="Undo">↩️</button>
+    <button class="kids-undo-bubble glass" onclick="showToast('Redo! ↪️')" aria-label="Redo">↪️</button>
+</div>
+
+<!-- Kids: Handedness toggle -->
+<button id="hand-toggle" onclick="toggleHand()" aria-label="Switch to left-handed layout" title="Switch hand">✋</button>
+
+
+<!-- =============================================
+     === STUDIO MODE UI ===
+     ============================================= -->
+
+<!-- Studio: Quick actions -->
+<div id="quick-actions">
+    <button class="quick-btn glass" aria-label="Open gallery" onclick="showToast('Gallery')">&#x1F5BC;</button>
+    <button class="quick-btn glass" aria-label="Save drawing" onclick="showToast('Saved!')">&#x1F4BE;</button>
+    <button class="quick-btn glass" aria-label="Reference image" onclick="openRefPanel()" title="Reference image" style="color:var(--info);">&#x1F5BC;</button>
+    <button class="quick-btn glass" aria-label="Share drawing">&#x1F517;</button>
+    <button class="quick-btn glass" aria-label="Settings" onclick="toggleTheme()">&#x2699;&#xFE0F;</button>
+</div>
+
+<!-- Studio: Undo/Redo -->
+<div id="undo-redo">
+    <button class="undo-btn glass" aria-label="Undo" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></button>
+    <button class="undo-btn glass" aria-label="Redo" title="Redo (Ctrl+Y)"><svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></button>
+</div>
+<div class="undo-dots" aria-label="5 of 8 undo steps used">
+    <div class="undo-dot filled"></div><div class="undo-dot filled"></div><div class="undo-dot filled"></div><div class="undo-dot filled"></div><div class="undo-dot filled"></div><div class="undo-dot"></div><div class="undo-dot"></div><div class="undo-dot"></div>
+</div>
+
+<!-- Studio: Gesture hints -->
+<div id="gesture-bar" class="glass" aria-hidden="true">
+    <div class="gesture-item"><span class="gesture-key">Pinch</span> Zoom</div>
+    <div class="gesture-item"><span class="gesture-key">2F Drag</span> Pan</div>
+    <div class="gesture-item"><span class="gesture-key">Space</span> Tools</div>
+</div>
+
+<!-- Studio: Zoom -->
+<div id="zoom-pill" class="glass" role="group" aria-label="Zoom controls">
+    <button class="zoom-btn" aria-label="Zoom out">&minus;</button>
+    <span class="zoom-value" aria-live="polite">100%</span>
+    <button class="zoom-btn" aria-label="Zoom in">+</button>
+    <button class="zoom-btn" style="font-size:11px;width:32px;" aria-label="Fit to canvas">Fit</button>
+</div>
+
+<!-- Studio: Dock -->
+<div id="dock" class="glass first-use" onclick="dockTapped()" title="Tap to open tools (Space)" role="button" aria-label="Open tool menu" aria-expanded="false" tabindex="0">
+    <div class="dock-tool-icon"><svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z" fill="white"/></svg></div>
+    <div class="dock-color" style="background-color: #FF6B6B;" id="dock-color"></div>
+    <div class="dock-size"><div class="dock-size-fill"></div></div>
+    <span class="dock-hint">TAP</span>
+</div>
+
+<!-- Studio: Radial menu -->
+<div class="radial-backdrop" id="radial-backdrop" onclick="toggleRadialMenu()"></div>
+<div id="radial-menu" role="menu" aria-label="Drawing tools">
+    <div class="radial-arc">
+        <div class="radial-section">
+            <div class="radial-tool" onclick="selectRadialTool(this, 'fill')" role="menuitem" tabindex="0"><div class="radial-tool-btn glass"><svg viewBox="0 0 24 24"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg></div><span class="radial-tool-label">Fill</span></div>
+            <div class="radial-tool" onclick="selectRadialTool(this, 'brush')" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass active"><svg viewBox="0 0 24 24"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/></svg></div><span class="radial-tool-label">Brush</span></div>
+            <div class="radial-tool" onclick="selectRadialTool(this, 'eraser')" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><svg viewBox="0 0 24 24"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg></div><span class="radial-tool-label">Eraser</span></div>
+            <div class="radial-tool" onclick="selectRadialTool(this, 'eyedropper')" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><svg viewBox="0 0 24 24"><path d="M20.71 5.63l-2.34-2.34a1 1 0 00-1.41 0l-3.54 3.54-1.41-1.41-1.41 1.41 1.06 1.06-7.07 7.07a2 2 0 000 2.83l2.83 2.83a2 2 0 002.83 0l7.07-7.07 1.06 1.06 1.41-1.41-1.41-1.41 3.54-3.54a1 1 0 000-1.62z"/></svg></div><span class="radial-tool-label">Picker</span></div>
+            <div class="radial-tool" onclick="selectRadialTool(this, 'select')" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><svg viewBox="0 0 24 24"><path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2z"/></svg></div><span class="radial-tool-label">Select</span></div>
+        </div>
+        <div class="radial-divider"></div>
+        <div class="radial-section">
+            <div class="radial-tool" onclick="toggleColorRiver()" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><div style="width:24px;height:24px;border-radius:50%;background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);"></div></div><span class="radial-tool-label">Color</span></div>
+            <div class="radial-tool" onclick="toggleSizeRing()" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><div style="display:flex;align-items:center;gap:3px;"><div style="width:6px;height:6px;border-radius:50%;background:var(--text-on-glass);"></div><div style="width:12px;height:12px;border-radius:50%;background:var(--text-on-glass);"></div><div style="width:8px;height:8px;border-radius:50%;background:var(--text-on-glass);opacity:0.4;"></div></div></div><span class="radial-tool-label">Size</span></div>
+            <div class="radial-tool" onclick="togglePresetStrip()" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><span style="font-size:20px;">&#x1F58D;</span></div><span class="radial-tool-label">Presets</span></div>
+            <div class="radial-tool" onclick="toggleLayerDrawer()" role="menuitem" tabindex="-1"><div class="radial-tool-btn glass"><svg viewBox="0 0 24 24"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z" fill="var(--text-on-glass)"/></svg></div><span class="radial-tool-label">Layers</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Studio: Size ring -->
+<div id="size-ring" class="glass" role="group" aria-label="Brush size">
+    <div class="size-ring-preview" id="size-preview" style="background:#FF6B6B;"></div>
+    <div class="size-ring-track"><div class="size-ring-fill"></div><div class="size-ring-thumb"></div></div>
+    <span class="size-ring-value">16</span>
+</div>
+
+<!-- Studio: Preset strip -->
+<div id="preset-strip" class="glass" role="radiogroup" aria-label="Brush presets">
+    <button class="preset-chip active" onclick="selectPreset(this)" role="radio" aria-checked="true"><span class="preset-chip-icon">&#x1F58D;</span><span class="preset-chip-name">Marker</span></button>
+    <button class="preset-chip" onclick="selectPreset(this)" role="radio" aria-checked="false"><span class="preset-chip-icon">&#x1F58D;</span><span class="preset-chip-name">Crayon</span></button>
+    <button class="preset-chip" onclick="selectPreset(this)" role="radio" aria-checked="false"><span class="preset-chip-icon">&#x1F4A7;</span><span class="preset-chip-name">Water</span></button>
+    <button class="preset-chip" onclick="selectPreset(this)" role="radio" aria-checked="false"><span class="preset-chip-icon">&#x270F;&#xFE0F;</span><span class="preset-chip-name">Pencil</span></button>
+    <button class="preset-chip" onclick="selectPreset(this)" role="radio" aria-checked="false"><span class="preset-chip-icon">&#x2728;</span><span class="preset-chip-name">Sparkle</span></button>
+</div>
+
+<!-- Studio: Color river -->
+<div id="color-river" class="glass" role="dialog" aria-label="Color picker">
+    <div class="river-header"><span class="river-title">Colors</span><button class="river-close" onclick="toggleColorRiver()" aria-label="Close color picker">&times;</button></div>
+    <div class="river-preview"><div class="river-preview-swatch" id="river-active-swatch" style="background-color: #FF6B6B;"></div><div><div class="river-preview-hex" id="river-hex">#FF6B6B</div><div class="river-preview-name">Coral Red</div></div></div>
+
+    <!-- Eyedropper -->
+    <button class="river-eyedropper-btn" onclick="showToast('Tap canvas to pick color')">
+        <span>&#x1F50D;</span> Pick from canvas
+    </button>
+
+    <div class="river-wheel-wrap"><div class="river-hue-ring"><div class="river-hue-selector"></div><div class="river-sl-area"><div class="river-sl-gradient"><div class="river-sl-cursor"></div></div></div></div></div>
+    <div class="river-lightness"><div class="river-lightness-label"><span>Dark</span><span>Light</span></div><div class="river-lightness-track"><div class="river-lightness-thumb"></div></div></div>
+
+    <!-- Pinned favorites -->
+    <div class="river-section-title">Pinned</div>
+    <div class="river-pinned">
+        <div class="river-pinned-swatch" style="background:#E8A0BF;"></div>
+        <div class="river-pinned-swatch" style="background:#2D5F8A;"></div>
+        <div class="river-pinned-swatch" style="background:#10AC84;"></div>
+    </div>
+
+    <!-- Color families -->
+    <div class="river-section-title">Palette</div>
+    <div class="river-family-label">Warm</div>
+    <div class="river-swatch-grid">
+        <div class="river-swatch active" style="background:#FF6B6B;" onclick="studioPickColor(this,'#FF6B6B')" aria-label="Coral red"></div>
+        <div class="river-swatch" style="background:#FF9F43;" onclick="studioPickColor(this,'#FF9F43')" aria-label="Orange"></div>
+        <div class="river-swatch" style="background:#FECA57;" onclick="studioPickColor(this,'#FECA57')" aria-label="Yellow"></div>
+        <div class="river-swatch" style="background:#EE5A24;" onclick="studioPickColor(this,'#EE5A24')" aria-label="Red orange"></div>
+    </div>
+    <div class="river-family-label">Cool</div>
+    <div class="river-swatch-grid">
+        <div class="river-swatch" style="background:#48DBFB;" onclick="studioPickColor(this,'#48DBFB')" aria-label="Sky blue"></div>
+        <div class="river-swatch" style="background:#0ABDE3;" onclick="studioPickColor(this,'#0ABDE3')" aria-label="Blue"></div>
+        <div class="river-swatch" style="background:#10AC84;" onclick="studioPickColor(this,'#10AC84')" aria-label="Green"></div>
+        <div class="river-swatch" style="background:#6C5CE7;" onclick="studioPickColor(this,'#6C5CE7')" aria-label="Purple"></div>
+    </div>
+    <div class="river-family-label">Neutral</div>
+    <div class="river-swatch-grid">
+        <div class="river-swatch" style="background:#FDA7DF;" onclick="studioPickColor(this,'#FDA7DF')" aria-label="Pink"></div>
+        <div class="river-swatch" style="background:#5D4037;" onclick="studioPickColor(this,'#5D4037')" aria-label="Brown"></div>
+        <div class="river-swatch" style="background:#A4B0BD;" onclick="studioPickColor(this,'#A4B0BD')" aria-label="Gray"></div>
+        <div class="river-swatch" style="background:#FFFFFF;border:2px dashed #ccc;" onclick="studioPickColor(this,'#FFFFFF')" aria-label="White"></div>
+    </div>
+
+    <div class="river-section-title">Recent</div>
+    <div class="river-recent">
+        <div class="river-recent-swatch" style="background:#E8A0BF;"></div>
+        <div class="river-recent-swatch" style="background:#2D5F8A;"></div>
+        <div class="river-recent-swatch" style="background:#8FBC8F;"></div>
+        <div class="river-recent-swatch" style="background:#C4A882;"></div>
+        <div class="river-recent-swatch" style="background:#6A4C93;"></div>
+        <div class="river-recent-swatch" style="background:#95E1D3;"></div>
+        <div class="river-recent-swatch" style="background:#FF6B6B;"></div>
+        <div class="river-recent-swatch" style="background:#48DBFB;"></div>
+    </div>
+</div>
+
+<!-- Studio: Layer drawer -->
+<div id="layer-drawer" class="glass" role="dialog" aria-label="Layers">
+    <div class="layer-drawer-header">
+        <span class="layer-drawer-title">Layers</span>
+        <div class="layer-drawer-actions">
+            <button class="layer-action-btn" aria-label="Add layer">+</button>
+            <button class="layer-action-btn" aria-label="Merge down">&#x21E9;</button>
+            <button class="layer-action-btn" onclick="toggleLayerDrawer()" aria-label="Close layers">&times;</button>
+        </div>
+    </div>
+    <div class="layer-card"><div class="layer-card-thumb" style="opacity:0.5;">&#x2014;</div><div><div class="layer-card-name">Outline</div><div class="layer-card-meta">Locked</div></div><button class="layer-vis-btn" aria-label="Toggle outline visibility">&#x1F441;</button></div>
+    <div class="layer-card"><div class="layer-card-thumb">&#x2B50;</div><div><div class="layer-card-name">Decorations</div><div class="layer-card-meta">100%</div></div><button class="layer-vis-btn" aria-label="Toggle decorations visibility">&#x1F441;</button></div>
+    <div class="layer-card active"><div class="layer-card-thumb">&#x1F3A8;</div><div><div class="layer-card-name">Coloring</div><div class="layer-card-meta">Active</div></div><button class="layer-vis-btn" aria-label="Toggle coloring visibility">&#x1F441;</button></div>
+    <div class="layer-card"><div class="layer-card-thumb">BG</div><div><div class="layer-card-name">Background</div><div class="layer-card-meta">White</div></div><button class="layer-vis-btn" aria-label="Toggle background visibility">&#x1F441;</button></div>
+    <div class="layer-opacity-bar"><div class="layer-opacity-header"><span class="layer-opacity-title">Opacity</span><span class="layer-opacity-value">100%</span></div><div class="layer-opacity-track"><div class="layer-opacity-fill"></div><div class="layer-opacity-thumb"></div></div></div>
+</div>
+
+<!-- Reference Image Panel — floating, adjustable -->
+<div id="ref-panel" class="hidden" role="dialog" aria-label="Reference image">
+    <!-- Kids: close badge (x on corner) -->
+    <button class="ref-close-kids" onclick="toggleRefPanel()" aria-label="Close reference">×</button>
+
+    <!-- Studio: drag handle -->
+    <div class="ref-handle" id="ref-handle">
+        <span class="ref-handle-title"><span>🖼</span> Reference</span>
+        <div class="ref-handle-btns">
+            <button class="ref-handle-btn" onclick="collapseRefPanel()" aria-label="Collapse to pip" title="Minimize">—</button>
+            <button class="ref-handle-btn" onclick="toggleRefPanel()" aria-label="Close reference" title="Close">×</button>
+        </div>
+    </div>
+
+    <!-- Image body -->
+    <div class="ref-body" id="ref-body">
+        <!-- Empty state (shown when no image loaded) -->
+        <div class="ref-empty" id="ref-empty" onclick="pickRefImage()">
+            <!-- Kids variant -->
+            <div class="ref-empty-kids">
+                <div class="ref-empty-kids-icon">+</div>
+            </div>
+            <!-- Studio variant -->
+            <div class="ref-empty-studio" id="ref-dropzone">
+                <span class="ref-empty-studio-icon">📁</span>
+                <span class="ref-empty-studio-text">Drop image here<br>or tap to browse</span>
+                <span class="ref-empty-studio-hint">JPG · PNG · WebP</span>
+            </div>
+        </div>
+
+        <!-- Loaded state (shown when image is present) -->
+        <div id="ref-loaded" class="hidden" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <!-- Demo: butterfly reference -->
+            <svg id="ref-demo-svg" viewBox="0 0 200 200" fill="none" stroke-linecap="round" style="width:90%;height:90%;">
+                <path d="M100,45 C82,32 45,18 28,58 C15,95 48,122 72,112 C82,107 92,96 100,102" fill="rgba(255,100,150,0.65)" stroke="#666" stroke-width="1.8"/>
+                <path d="M100,45 C118,32 155,18 172,58 C185,95 152,122 128,112 C118,107 108,96 100,102" fill="rgba(100,180,255,0.65)" stroke="#666" stroke-width="1.8"/>
+                <circle cx="62" cy="58" r="14" fill="rgba(255,200,60,0.7)" stroke="#888" stroke-width="1.2"/>
+                <circle cx="138" cy="58" r="14" fill="rgba(100,220,100,0.7)" stroke="#888" stroke-width="1.2"/>
+                <circle cx="52" cy="88" r="9" fill="rgba(180,140,255,0.65)" stroke="#888" stroke-width="1.2"/>
+                <circle cx="148" cy="88" r="9" fill="rgba(255,170,100,0.65)" stroke="#888" stroke-width="1.2"/>
+                <ellipse cx="100" cy="75" rx="6" ry="30" fill="rgba(100,65,45,0.75)" stroke="#555" stroke-width="1.5"/>
+                <circle cx="100" cy="40" r="8" fill="rgba(100,65,45,0.75)" stroke="#555" stroke-width="1.5"/>
+                <circle cx="97" cy="38" r="2" fill="#333"/>
+                <circle cx="103" cy="38" r="2" fill="#333"/>
+                <path d="M94,33 C88,18 82,10 76,4" stroke="#666" stroke-width="1.2" fill="none"/>
+                <path d="M106,33 C112,18 118,10 124,4" stroke="#666" stroke-width="1.2" fill="none"/>
+                <circle cx="76" cy="4" r="3" fill="rgba(255,111,0,0.8)" stroke="#888" stroke-width="1"/>
+                <circle cx="124" cy="4" r="3" fill="rgba(255,111,0,0.8)" stroke="#888" stroke-width="1"/>
+            </svg>
+            <!-- User image goes here when loaded -->
+            <img id="ref-user-img" class="hidden" alt="Reference image" />
+        </div>
+
+        <!-- Replace button (visible on hover when image is loaded) -->
+        <button class="ref-replace-btn hidden" id="ref-replace-btn" onclick="pickRefImage()" aria-label="Replace reference image" title="Replace image">🔄</button>
+    </div>
+
+    <!-- Collapsed pip icon -->
+    <div class="ref-pip-badge" onclick="expandRefPanel()">🖼</div>
+
+    <!-- Studio: controls bar -->
+    <div class="ref-controls">
+        <span class="ref-opacity-label">Opacity</span>
+        <input type="range" class="ref-opacity-slider" id="ref-opacity" min="20" max="100" value="80" aria-label="Reference image opacity" oninput="updateRefOpacity(this.value)">
+        <span class="ref-opacity-value" id="ref-opacity-val">80%</span>
+        <button class="ref-ctrl-btn" onclick="pickRefImage()" aria-label="Replace image" title="Replace image">🔄</button>
+        <button class="ref-ctrl-btn pinned" onclick="toggleRefPin(this)" aria-label="Pin panel" title="Pin position">📌</button>
+        <button class="ref-ctrl-btn" onclick="flipRefImage()" aria-label="Flip reference" title="Flip horizontal">↔</button>
+    </div>
+
+    <!-- Studio: resize grip -->
+    <div class="ref-resize" id="ref-resize"></div>
+</div>
+
+<!-- Studio: Edge triggers -->
+<div class="edge-trigger edge-trigger-left glass" onclick="toggleLayerDrawer()" aria-label="Open layers"><span class="edge-trigger-icon">&#x276F;</span></div>
+<div class="edge-trigger edge-trigger-right glass" onclick="toggleColorRiver()" aria-label="Open colors"><span class="edge-trigger-icon">&#x276E;</span></div>
+
+<!-- Toast -->
+<div class="toast" id="toast" style="display:none;" role="status" aria-live="polite">Saved!</div>
+
+
+<!-- =============================================
+     SCRIPTS
+     ============================================= -->
+<script>
+// === STATE ===
+let currentMode = 'kids';
+let soundEnabled = true;
+let radialOpen = false, colorRiverOpen = false, layerDrawerOpen = false;
+let sizeRingOpen = false, presetStripOpen = false, stickerTrayOpen = false;
+let dockUsed = false;
+
+// === MODE SWITCHING with smooth transition ===
+function setMode(mode) {
+    currentMode = mode;
+    document.body.setAttribute('data-mode', mode);
+    document.documentElement.setAttribute('data-mode', mode);
+    document.getElementById('mode-kids').classList.toggle('active', mode === 'kids');
+    document.getElementById('mode-studio').classList.toggle('active', mode === 'studio');
+    document.getElementById('mode-kids').setAttribute('aria-selected', mode === 'kids');
+    document.getElementById('mode-studio').setAttribute('aria-selected', mode === 'studio');
+
+    // Close all drawers
+    closeAllDrawers();
+    announce(mode === 'kids' ? 'Kids mode' : 'Studio mode');
+}
+
+function closeAllDrawers() {
+    colorRiverOpen = false; layerDrawerOpen = false;
+    sizeRingOpen = false; presetStripOpen = false;
+    stickerTrayOpen = false; radialOpen = false;
+    document.getElementById('color-river').classList.remove('open');
+    document.getElementById('layer-drawer').classList.remove('open');
+    document.getElementById('size-ring').classList.remove('open');
+    document.getElementById('preset-strip').classList.remove('open');
+    document.getElementById('radial-menu').classList.remove('open');
+    document.getElementById('radial-backdrop').classList.remove('open');
+    document.getElementById('kids-sticker-tray').classList.remove('open');
+    document.getElementById('dock')?.setAttribute('aria-expanded', 'false');
+}
+
+// === SCREEN READER ANNOUNCEMENTS ===
+function announce(msg) {
+    const el = document.getElementById('sr-announce');
+    el.textContent = '';
+    requestAnimationFrame(() => { el.textContent = msg; });
+}
+
+// === KIDS MODE ===
+function kidsSelectTool(el, tool) {
+    document.querySelectorAll('.kids-tool-bubble').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-pressed', 'true');
+
+    if (tool === 'sticker') { kidsToggleStickers(); return; }
+    stickerTrayOpen = false;
+    document.getElementById('kids-sticker-tray').classList.remove('open');
+    spawnStarBurst(el);
+    announce(el.getAttribute('aria-label') + ' selected');
+}
+
+function kidsPickColor(el, hex) {
+    document.querySelectorAll('.kids-color-swatch').forEach(s => {
+        s.classList.remove('active');
+        s.setAttribute('aria-checked', 'false');
+        s.setAttribute('tabindex', '-1');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-checked', 'true');
+    el.setAttribute('tabindex', '0');
+    spawnStarBurst(el);
+    announce(el.getAttribute('aria-label') + ' selected');
+}
+
+function kidsSelectSize(el) {
+    document.querySelectorAll('.kids-size-dot').forEach(d => {
+        d.classList.remove('active');
+        d.setAttribute('aria-checked', 'false');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-checked', 'true');
+    announce(el.getAttribute('aria-label') + ' selected');
+}
+
+function kidsToggleStickers() {
+    stickerTrayOpen = !stickerTrayOpen;
+    document.getElementById('kids-sticker-tray').classList.toggle('open', stickerTrayOpen);
+    document.querySelectorAll('.kids-tool-bubble').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+    });
+    document.querySelector('.kids-tool-sticker').classList.add('active');
+    document.querySelector('.kids-tool-sticker').setAttribute('aria-pressed', 'true');
+}
+
+function kidsAction(msg) {
+    showToast(msg);
+    spawnConfetti();
+}
+
+function kidsLighten() { showToast('Lighter! ☀️'); announce('Color made lighter'); }
+function kidsDarken() { showToast('Darker! 🌙'); announce('Color made darker'); }
+
+// === HANDEDNESS ===
+function toggleHand() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-hand');
+    const next = current === 'right' ? 'left' : 'right';
+    html.setAttribute('data-hand', next);
+    const btn = document.getElementById('hand-toggle');
+    btn.setAttribute('aria-label', `Switch to ${next === 'right' ? 'left' : 'right'}-handed layout`);
+    showToast(next === 'left' ? 'Left-handed mode ✋' : 'Right-handed mode 🤚');
+    announce(next + '-handed layout');
+}
+
+// === SOUND TOGGLE ===
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    const btn = document.getElementById('sound-toggle');
+    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    btn.classList.toggle('sound-on', soundEnabled);
+    btn.setAttribute('aria-label', 'Sound effects: ' + (soundEnabled ? 'on' : 'off'));
+    showToast(soundEnabled ? 'Sounds on 🔊' : 'Sounds off 🔇');
+}
+
+// === CELEBRATIONS ===
+function spawnConfetti() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        // Reduced motion: simple flash
+        const flash = document.createElement('div');
+        flash.className = 'reduced-feedback';
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 500);
+        return;
+    }
+    const container = document.getElementById('confetti-container');
+    const colors = ['#FF6B6B','#FECA57','#48DBFB','#10AC84','#6C5CE7','#FDA7DF','#FF9F43','#1DD1A1'];
+    for (let i = 0; i < 20; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = (15 + Math.random() * 70) + 'vw';
+        piece.style.top = '-10px';
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = (Math.random() * 0.35) + 's';
+        piece.style.animationDuration = (1 + Math.random() * 0.8) + 's';
+        piece.style.width = (6 + Math.random() * 7) + 'px';
+        piece.style.height = (6 + Math.random() * 7) + 'px';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        container.appendChild(piece);
+        setTimeout(() => piece.remove(), 2200);
+    }
+}
+
+function spawnStarBurst(el) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rect = el.getBoundingClientRect();
+    const stars = ['⭐','✨','🌟'];
+    for (let i = 0; i < 3; i++) {
+        const star = document.createElement('div');
+        star.className = 'star-burst';
+        star.textContent = stars[i % stars.length];
+        star.style.left = (rect.left + rect.width/2 - 14 + (Math.random()-0.5)*36) + 'px';
+        star.style.top = (rect.top + rect.height/2 - 14 + (Math.random()-0.5)*36) + 'px';
+        star.style.animationDelay = (i * 0.07) + 's';
+        document.body.appendChild(star);
+        setTimeout(() => star.remove(), 600);
+    }
+}
+
+// === STUDIO MODE ===
+function dockTapped() {
+    if (currentMode !== 'studio') return;
+    if (!dockUsed) {
+        dockUsed = true;
+        document.getElementById('dock').classList.remove('first-use');
+    }
+    toggleRadialMenu();
+}
+
+function toggleRadialMenu() {
+    if (currentMode !== 'studio') return;
+    radialOpen = !radialOpen;
+    document.getElementById('radial-menu').classList.toggle('open', radialOpen);
+    document.getElementById('radial-backdrop').classList.toggle('open', radialOpen);
+    document.getElementById('dock').setAttribute('aria-expanded', radialOpen);
+    if (radialOpen) {
+        sizeRingOpen = false; presetStripOpen = false;
+        document.getElementById('size-ring').classList.remove('open');
+        document.getElementById('preset-strip').classList.remove('open');
+        // Focus first tool for keyboard access
+        setTimeout(() => {
+            const first = document.querySelector('#radial-menu .radial-tool[tabindex="0"]');
+            if (first) first.focus();
+        }, 200);
+    }
+}
+
+function selectRadialTool(el, tool) {
+    document.querySelectorAll('.radial-tool-btn').forEach(b => b.classList.remove('active'));
+    el.querySelector('.radial-tool-btn').classList.add('active');
+    announce(tool + ' tool selected');
+    setTimeout(() => toggleRadialMenu(), 180);
+}
+
+function toggleColorRiver() {
+    colorRiverOpen = !colorRiverOpen;
+    document.getElementById('color-river').classList.toggle('open', colorRiverOpen);
+    if (colorRiverOpen && radialOpen) toggleRadialMenu();
+    if (colorRiverOpen && layerDrawerOpen) toggleLayerDrawer();
+}
+
+function toggleLayerDrawer() {
+    layerDrawerOpen = !layerDrawerOpen;
+    document.getElementById('layer-drawer').classList.toggle('open', layerDrawerOpen);
+    if (layerDrawerOpen && radialOpen) toggleRadialMenu();
+    if (layerDrawerOpen && colorRiverOpen) toggleColorRiver();
+}
+
+function toggleSizeRing() {
+    sizeRingOpen = !sizeRingOpen;
+    document.getElementById('size-ring').classList.toggle('open', sizeRingOpen);
+    if (sizeRingOpen && radialOpen) toggleRadialMenu();
+    if (sizeRingOpen) { presetStripOpen = false; document.getElementById('preset-strip').classList.remove('open'); }
+}
+
+function togglePresetStrip() {
+    presetStripOpen = !presetStripOpen;
+    document.getElementById('preset-strip').classList.toggle('open', presetStripOpen);
+    if (presetStripOpen && radialOpen) toggleRadialMenu();
+    if (presetStripOpen) { sizeRingOpen = false; document.getElementById('size-ring').classList.remove('open'); }
+}
+
+function selectPreset(el) {
+    document.querySelectorAll('.preset-chip').forEach(c => {
+        c.classList.remove('active');
+        c.setAttribute('aria-checked', 'false');
+    });
+    el.classList.add('active');
+    el.setAttribute('aria-checked', 'true');
+}
+
+function studioPickColor(el, hex) {
+    document.querySelectorAll('.river-swatch').forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('river-active-swatch').style.backgroundColor = hex;
+    document.getElementById('river-hex').textContent = hex;
+    document.getElementById('dock-color').style.backgroundColor = hex;
+    document.getElementById('size-preview').style.backgroundColor = hex;
+    announce('Color ' + (el.getAttribute('aria-label') || hex) + ' selected');
+}
+
+// Layer selection
+document.querySelectorAll('.layer-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.layer-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+    });
+});
+
+// === THEME ===
+function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? '' : 'dark');
+    showToast(isDark ? 'Light mode ☀️' : 'Dark mode 🌙');
+}
+
+// === TOAST ===
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.animation = 'none';
+    t.offsetHeight;
+    t.style.animation = '';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.display = 'none'; }, 2000);
+}
+
+// === KEYBOARD NAV ===
+document.addEventListener('keydown', (e) => {
+    // Space opens radial in studio
+    if (e.key === ' ' && currentMode === 'studio' && document.activeElement.tagName !== 'BUTTON') {
+        toggleRadialMenu(); e.preventDefault();
+    }
+    // Escape closes everything
+    if (e.key === 'Escape') { closeAllDrawers(); }
+    // C/L shortcuts for studio
+    if (e.key === 'c' && currentMode === 'studio' && !e.ctrlKey) toggleColorRiver();
+    if (e.key === 'l' && currentMode === 'studio' && !e.ctrlKey) toggleLayerDrawer();
+
+    // Arrow keys in radial menu
+    if (radialOpen && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const tools = [...document.querySelectorAll('#radial-menu .radial-tool')];
+        const focused = document.activeElement.closest('.radial-tool');
+        let idx = tools.indexOf(focused);
+        if (idx < 0) idx = 0;
+        idx += e.key === 'ArrowRight' ? 1 : -1;
+        idx = (idx + tools.length) % tools.length;
+        tools[idx].focus();
+        e.preventDefault();
+    }
+
+    // Arrow keys in kids color swatches
+    if (currentMode === 'kids') {
+        const swatches = [...document.querySelectorAll('.kids-color-swatch')];
+        const focused = document.activeElement;
+        if (swatches.includes(focused) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            let idx = swatches.indexOf(focused);
+            idx += e.key === 'ArrowRight' ? 1 : -1;
+            idx = Math.max(0, Math.min(idx, swatches.length - 1));
+            swatches[idx].focus();
+            e.preventDefault();
+        }
+    }
+});
+
+// Auto-detect dark mode preference
+if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+
+// === REFERENCE PANEL ===
+let refVisible = false;
+let refPinned = true;
+let refFlipped = false;
+let refHasImage = false;
+
+// Hidden file input for image picking
+const refFileInput = document.createElement('input');
+refFileInput.type = 'file';
+refFileInput.accept = 'image/jpeg,image/png,image/webp,image/gif';
+refFileInput.style.display = 'none';
+document.body.appendChild(refFileInput);
+
+refFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) loadRefImage(file);
+    refFileInput.value = ''; // reset so same file can be picked again
+});
+
+function openRefPanel() {
+    const panel = document.getElementById('ref-panel');
+    refVisible = true;
+    panel.classList.remove('hidden');
+    panel.classList.remove('collapsed');
+    // Show empty state if no image, loaded state if image exists
+    updateRefState();
+    announce('Reference panel opened');
+}
+
+function toggleRefPanel() {
+    if (refVisible) {
+        document.getElementById('ref-panel').classList.add('hidden');
+        refVisible = false;
+        announce('Reference panel closed');
+    } else {
+        openRefPanel();
+    }
+}
+
+function collapseRefPanel() {
+    document.getElementById('ref-panel').classList.add('collapsed');
+    announce('Reference minimized');
+}
+
+function expandRefPanel() {
+    document.getElementById('ref-panel').classList.remove('collapsed');
+    announce('Reference restored');
+}
+
+function pickRefImage() {
+    refFileInput.click();
+}
+
+function loadRefImage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = document.getElementById('ref-user-img');
+        img.src = e.target.result;
+        img.classList.remove('hidden');
+        // Hide the demo SVG
+        const demoSvg = document.getElementById('ref-demo-svg');
+        if (demoSvg) demoSvg.style.display = 'none';
+
+        refHasImage = true;
+        updateRefState();
+        showToast('Reference loaded! 🖼');
+        announce('Reference image loaded');
+    };
+    reader.readAsDataURL(file);
+}
+
+function loadDemoRef() {
+    // Use the built-in SVG as reference (demo mode)
+    const demoSvg = document.getElementById('ref-demo-svg');
+    if (demoSvg) demoSvg.style.display = '';
+    document.getElementById('ref-user-img').classList.add('hidden');
+    refHasImage = true;
+    updateRefState();
+    showToast('Demo reference loaded! 🦋');
+}
+
+function updateRefState() {
+    const empty = document.getElementById('ref-empty');
+    const loaded = document.getElementById('ref-loaded');
+    const replaceBtn = document.getElementById('ref-replace-btn');
+
+    if (refHasImage) {
+        empty.classList.add('hidden');
+        loaded.classList.remove('hidden');
+        loaded.style.display = 'flex';
+        replaceBtn.classList.remove('hidden');
+    } else {
+        empty.classList.remove('hidden');
+        loaded.classList.add('hidden');
+        loaded.style.display = 'none';
+        replaceBtn.classList.add('hidden');
+    }
+}
+
+function updateRefOpacity(val) {
+    const loaded = document.getElementById('ref-loaded');
+    if (loaded) loaded.style.opacity = val / 100;
+    document.getElementById('ref-opacity-val').textContent = val + '%';
+}
+
+function toggleRefPin(btn) {
+    refPinned = !refPinned;
+    btn.classList.toggle('pinned', refPinned);
+    showToast(refPinned ? 'Panel pinned 📌' : 'Panel unpinned');
+}
+
+function flipRefImage() {
+    refFlipped = !refFlipped;
+    const loaded = document.getElementById('ref-loaded');
+    if (loaded) loaded.style.transform = refFlipped ? 'scaleX(-1)' : '';
+    showToast(refFlipped ? 'Flipped ↔' : 'Unflipped');
+}
+
+// Drag-and-drop on the studio drop zone
+(function initRefDragDrop() {
+    const dropzone = document.getElementById('ref-dropzone');
+    if (!dropzone) return;
+
+    ['dragenter','dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+    });
+
+    ['dragleave','drop'].forEach(evt => {
+        dropzone.addEventListener(evt, () => {
+            dropzone.classList.remove('dragover');
+        });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files[0];
+        if (file && file.type.startsWith('image/')) {
+            loadRefImage(file);
+        }
+    });
+
+    // Also support drag on the whole panel body when empty
+    const body = document.getElementById('ref-body');
+    body.addEventListener('dragover', (e) => e.preventDefault());
+    body.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files[0];
+        if (file && file.type.startsWith('image/')) {
+            loadRefImage(file);
+        }
+    });
+})();
+
+// === DRAG (Studio mode only) ===
+(function initDrag() {
+    const panel = document.getElementById('ref-panel');
+    const handle = document.getElementById('ref-handle');
+    let dragging = false, startX, startY, origX, origY;
+
+    handle.addEventListener('pointerdown', (e) => {
+        if (currentMode !== 'studio' || panel.classList.contains('collapsed')) return;
+        dragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        const rect = panel.getBoundingClientRect();
+        origX = rect.left;
+        origY = rect.top;
+        handle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        panel.style.left = (origX + dx) + 'px';
+        panel.style.top = (origY + dy) + 'px';
+        panel.style.right = 'auto';
+    });
+
+    handle.addEventListener('pointerup', () => { dragging = false; });
+    handle.addEventListener('pointercancel', () => { dragging = false; });
+})();
+
+// === RESIZE (Studio mode only) ===
+(function initResize() {
+    const panel = document.getElementById('ref-panel');
+    const grip = document.getElementById('ref-resize');
+    let resizing = false, startX, startY, origW, origH;
+
+    grip.addEventListener('pointerdown', (e) => {
+        if (currentMode !== 'studio') return;
+        resizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        origW = panel.offsetWidth;
+        origH = panel.offsetHeight;
+        grip.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    });
+
+    grip.addEventListener('pointermove', (e) => {
+        if (!resizing) return;
+        const w = Math.max(140, origW + (e.clientX - startX));
+        const h = Math.max(120, origH + (e.clientY - startY));
+        panel.style.width = w + 'px';
+        panel.style.height = h + 'px';
+    });
+
+    grip.addEventListener('pointerup', () => { resizing = false; });
+    grip.addEventListener('pointercancel', () => { resizing = false; });
+})();
+
+// Initialize
+setMode('kids');
+</script>
+
+<!-- Demo controls — not part of actual app UI -->
+<div style="position:fixed; bottom:12px; right:12px; z-index:9000; display:flex; gap:6px;">
+    <button onclick="openRefPanel()" style="padding:8px 14px; border-radius:20px; border:none; background:#0ABDE3; color:white; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15);">Open Ref (empty)</button>
+    <button onclick="loadDemoRef(); openRefPanel();" style="padding:8px 14px; border-radius:20px; border:none; background:#6C5CE7; color:white; font-family:var(--font); font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.15);">Open Ref (with image)</button>
+</div>
+
+</body>
+</html>

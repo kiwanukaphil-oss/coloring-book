@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('FloodFill', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
     // Close gallery so canvas is accessible
     await page.evaluate(() => ImageLoader.hideGallery());
   });

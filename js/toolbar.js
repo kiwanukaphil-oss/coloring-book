@@ -69,6 +69,11 @@ const Toolbar = (() => {
         brushButton.classList.remove('active');
         eraserButton.classList.remove('active');
 
+        // Toggle aria-pressed for screen readers (ADR-013)
+        fillButton.setAttribute('aria-pressed', tool === 'fill' ? 'true' : 'false');
+        brushButton.setAttribute('aria-pressed', tool === 'brush' ? 'true' : 'false');
+        eraserButton.setAttribute('aria-pressed', tool === 'eraser' ? 'true' : 'false');
+
         if (tool === 'fill') {
             fillButton.classList.add('active');
             brushSizeControl.classList.add('hidden');
@@ -80,6 +85,8 @@ const Toolbar = (() => {
             eraserButton.classList.add('active');
             brushSizeControl.classList.remove('hidden');
         }
+
+        EventBus.emit('tool:changed', { tool });
     }
 
     function setupBrushSizeSlider() {
@@ -145,19 +152,22 @@ const Toolbar = (() => {
 
     // Composites the coloring and outline layers into a single
     // PNG image and triggers a browser download with a timestamped
-    // filename
+    // filename. Public so Kids/Studio save buttons can delegate
+    // here instead of duplicating the logic (ADR-015).
+    function saveAndDownload() {
+        const dataUrl = CanvasManager.renderCompositeForSave();
+
+        const link = document.createElement('a');
+        link.download = 'coloring-' + Date.now() + '.png';
+        link.href = dataUrl;
+        link.click();
+
+        FeedbackManager.showToast('Saved!');
+        ProgressManager.saveCurrentProject();
+    }
+
     function setupSaveButton() {
-        document.getElementById('tool-save').addEventListener('pointerdown', () => {
-            const dataUrl = CanvasManager.renderCompositeForSave();
-
-            const link = document.createElement('a');
-            link.download = 'coloring-' + Date.now() + '.png';
-            link.href = dataUrl;
-            link.click();
-
-            FeedbackManager.showToast('Saved!');
-            ProgressManager.saveCurrentProject();
-        });
+        document.getElementById('tool-save').addEventListener('pointerdown', saveAndDownload);
     }
 
     function setupGalleryButton() {
@@ -177,6 +187,8 @@ const Toolbar = (() => {
 
         interactionCanvas.addEventListener('pointerdown', (event) => {
             if (activeTool !== 'fill') return;
+            // Skip fill when spacebar pan is active (ADR-009)
+            if (typeof ViewportManager !== 'undefined' && ViewportManager.isPanActive()) return;
             event.preventDefault();
 
             isFillPointerDown = true;
@@ -191,10 +203,12 @@ const Toolbar = (() => {
             }
             isFillPointerDown = false;
 
-            // Only fill if the pointer didn't move much (it's a tap, not a drag)
+            // Only fill if the pointer didn't move much (it's a tap, not a drag).
+            // Scale threshold by viewport zoom so fills stay accurate at high zoom (ADR-009).
             const dx = event.clientX - fillStartX;
             const dy = event.clientY - fillStartY;
-            if (Math.sqrt(dx * dx + dy * dy) > 10) return;
+            const tapThreshold = 10 * (typeof ViewportManager !== 'undefined' ? ViewportManager.getScale() : 1);
+            if (Math.sqrt(dx * dx + dy * dy) > tapThreshold) return;
 
             const coords = CanvasManager.getCanvasPixelCoords(event);
 
@@ -270,6 +284,7 @@ const Toolbar = (() => {
         initialize,
         getActiveTool,
         setActiveTool,
-        setBrushSize
+        setBrushSize,
+        saveAndDownload
     };
 })();

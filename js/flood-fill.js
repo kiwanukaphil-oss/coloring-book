@@ -101,6 +101,7 @@ const FloodFill = (() => {
         });
 
         ProgressManager.scheduleAutoSave();
+        EventBus.emit('fill:complete', { x: startX, y: startY });
     }
 
     // Scanline stack-based flood fill: processes horizontal spans

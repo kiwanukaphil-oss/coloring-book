@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 
 test.describe('CanvasManager', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/index.html');
+    await page.goto('/index.html?classic=1');
   });
 
   test('initializes four canvas layers with matching dimensions', async ({ page }) => {

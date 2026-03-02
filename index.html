@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -7,12 +7,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <title>My Coloring Book</title>
 </head>
 <body>
     <!-- Image gallery modal -->
-    <div id="image-gallery-modal" class="modal hidden">
+    <div id="image-gallery-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Image Gallery">
         <div class="modal-content">
             <div class="gallery-tabs">
                 <button id="tab-templates" class="gallery-tab gallery-tab-active">Pick a Picture!</button>
@@ -38,7 +41,7 @@
     </div>
 
     <!-- Clear confirmation modal -->
-    <div id="clear-confirm-modal" class="modal hidden">
+    <div id="clear-confirm-modal" class="modal hidden" role="alertdialog" aria-modal="true" aria-label="Confirm clear">
         <div class="modal-content modal-content-small">
             <p class="confirm-text">Erase all your coloring?</p>
             <div class="confirm-buttons">
@@ -49,7 +52,7 @@
     </div>
 
     <!-- Resume project modal -->
-    <div id="resume-modal" class="modal hidden">
+    <div id="resume-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Resume project">
         <div class="modal-content modal-content-small">
             <p class="confirm-text">Welcome back!</p>
             <p class="resume-subtitle">You have unfinished work.</p>
@@ -61,6 +64,92 @@
                 <button id="resume-no" class="confirm-button confirm-fresh">Start Fresh</button>
             </div>
         </div>
+    </div>
+
+    <!-- Mode switch toggle (top center, always visible) -->
+    <div id="mode-switch" class="mode-switch" role="radiogroup" aria-label="Interface mode">
+        <button class="mode-option active" data-mode-value="kids" role="radio" aria-checked="true">Kids</button>
+        <button class="mode-option" data-mode-value="studio" role="radio" aria-checked="false">Studio</button>
+    </div>
+
+    <!-- Theme toggle (top right corner) -->
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+        <span class="theme-toggle-icon">&#9789;</span>
+    </button>
+
+    <!-- ===== KIDS MODE UI ===== -->
+    <!-- Tool bubbles (left edge, handedness-aware) -->
+    <div id="kids-tools" class="kids-tools kids-only" role="toolbar" aria-label="Drawing tools">
+        <button class="kids-tool-bubble active" aria-label="Fill" aria-pressed="true" data-tool="fill">&#x1FAA3;</button>
+        <button class="kids-tool-bubble" aria-label="Brush" aria-pressed="false" data-tool="brush">&#x1F58C;&#xFE0F;</button>
+        <button class="kids-tool-bubble" aria-label="Eraser" aria-pressed="false" data-tool="eraser">&#x1F9FD;</button>
+    </div>
+
+    <!-- Kids undo/redo bar (top right) -->
+    <div id="kids-undo-bar" class="kids-undo-bar kids-only" role="toolbar" aria-label="Undo and redo">
+        <button id="kids-undo" class="kids-action-btn" aria-label="Undo">&#x21A9;&#xFE0F;</button>
+        <button id="kids-redo" class="kids-action-btn" aria-label="Redo">&#x21AA;&#xFE0F;</button>
+    </div>
+
+    <!-- Kids size bubbles (bottom left) -->
+    <div id="kids-size-bubbles" class="kids-size-bubbles kids-only" role="radiogroup" aria-label="Brush size">
+        <button class="kids-size-bubble size-small" data-brush-size="8" aria-label="Small brush"></button>
+        <button class="kids-size-bubble size-medium active" data-brush-size="16" aria-label="Medium brush"></button>
+        <button class="kids-size-bubble size-large" data-brush-size="28" aria-label="Large brush"></button>
+    </div>
+
+    <!-- Kids action buttons (top left) -->
+    <div class="kids-top-left kids-only">
+        <button id="kids-gallery-btn" class="kids-action-btn" aria-label="Gallery">&#x1F5BC;&#xFE0F;</button>
+        <button id="kids-save-btn" class="kids-action-btn" aria-label="Save">&#x1F4BE;</button>
+    </div>
+
+    <!-- Kids lighter/darker buttons (ADR-012) -->
+    <div class="kids-lightness kids-only">
+        <button id="kids-lighter" class="kids-action-btn" aria-label="Lighter color">&#x2600;&#xFE0F;</button>
+        <button id="kids-darker" class="kids-action-btn" aria-label="Darker color">&#x1F319;</button>
+    </div>
+
+    <!-- Kids handedness toggle -->
+    <button id="hand-toggle" class="hand-toggle kids-only" aria-label="Switch hand side">&#x270B;</button>
+
+    <!-- ===== STUDIO MODE UI ===== -->
+    <!-- Floating dock (bottom center) -->
+    <div id="dock" class="dock studio-only" role="toolbar" aria-label="Tool dock">
+        <button class="dock-tool active" data-tool="fill" aria-label="Fill" title="Fill">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg>
+        </button>
+        <button class="dock-tool" data-tool="brush" aria-label="Brush" title="Brush">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/></svg>
+        </button>
+        <button class="dock-tool" data-tool="eraser" aria-label="Eraser" title="Eraser">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>
+        </button>
+        <div class="dock-divider"></div>
+        <button id="studio-gallery" class="dock-tool" aria-label="Gallery" title="Gallery">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/></svg>
+        </button>
+        <button id="studio-save" class="dock-tool" aria-label="Save" title="Save">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        </button>
+    </div>
+
+    <!-- Studio zoom pill (bottom left, ADR-009) -->
+    <div id="zoom-pill" class="zoom-pill studio-only" aria-label="Zoom controls">
+        <button id="zoom-out" class="zoom-pill-btn" aria-label="Zoom out" title="Zoom out">&#x2212;</button>
+        <span id="zoom-value" class="zoom-pill-value">100%</span>
+        <button id="zoom-in" class="zoom-pill-btn" aria-label="Zoom in" title="Zoom in">&#x2B;</button>
+        <button id="zoom-reset" class="zoom-pill-btn" aria-label="Reset zoom" title="Reset zoom">&#x21BA;</button>
+    </div>
+
+    <!-- Studio undo/redo (top right) -->
+    <div id="studio-undo-bar" class="studio-undo-bar studio-only" role="toolbar" aria-label="Undo and redo">
+        <button id="studio-undo" class="studio-action-btn" aria-label="Undo" title="Undo">
+            <svg viewBox="0 0 24 24" class="studio-action-icon"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button id="studio-redo" class="studio-action-btn" aria-label="Redo" title="Redo">
+            <svg viewBox="0 0 24 24" class="studio-action-icon"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+        </button>
     </div>
 
     <!-- Main app layout -->
@@ -86,20 +175,20 @@
         </div>
 
         <!-- Color palette (right side) -->
-        <div id="color-palette"></div>
+        <div id="color-palette" role="radiogroup" aria-label="Color palette"></div>
     </div>
 
     <!-- Toolbar (bottom) -->
-    <div id="toolbar">
-        <button id="tool-fill" class="tool-button active" title="Fill">
+    <div id="toolbar" role="toolbar" aria-label="Drawing tools">
+        <button id="tool-fill" class="tool-button active" title="Fill" aria-pressed="true" aria-label="Fill tool">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg>
             <span class="tool-label">Fill</span>
         </button>
-        <button id="tool-brush" class="tool-button" title="Brush">
+        <button id="tool-brush" class="tool-button" title="Brush" aria-pressed="false" aria-label="Brush tool">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37l-1.34-1.34a.996.996 0 00-1.41 0L9 12.25 11.75 15l8.96-8.96a.996.996 0 000-1.41z"/></svg>
             <span class="tool-label">Brush</span>
         </button>
-        <button id="tool-eraser" class="tool-button" title="Eraser">
+        <button id="tool-eraser" class="tool-button" title="Eraser" aria-pressed="false" aria-label="Eraser tool">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>
             <span class="tool-label">Eraser</span>
         </button>
@@ -130,16 +219,38 @@
         <div id="active-color-indicator" class="active-color-indicator" style="background-color: #FF0000;"></div>
     </div>
 
+    <!-- HSL Color Picker popover (ADR-012) -->
+    <div id="color-picker" class="color-picker hidden" role="dialog" aria-modal="true" aria-label="Color picker">
+        <div class="picker-body">
+            <canvas id="hue-ring-canvas" class="picker-hue-ring" width="180" height="180"></canvas>
+            <canvas id="sl-square-canvas" class="picker-sl-square" width="140" height="140"></canvas>
+            <div id="picker-preview" class="picker-preview" aria-label="Color preview"></div>
+            <div id="picker-recent" class="picker-recent" aria-label="Recent colors"></div>
+            <div class="picker-actions">
+                <button id="picker-confirm" class="picker-btn picker-btn-confirm">Apply</button>
+                <button id="picker-cancel" class="picker-btn picker-btn-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- "+" swatch to open color picker (appended after palette swatches) -->
+    <button id="picker-open-btn" class="picker-open-btn" aria-label="Open color picker" title="Custom color">+</button>
+
     <!-- Toast notification -->
-    <div id="toast-container" class="toast-container hidden">
+    <div id="toast-container" class="toast-container hidden" role="alert" aria-live="assertive">
         <span id="toast-message" class="toast-message"></span>
     </div>
 
+    <script src="js/event-bus.js"></script>
     <script src="js/touch-guard.js"></script>
     <script src="js/feedback-manager.js"></script>
+    <script src="js/mode-manager.js"></script>
     <script src="js/canvas-manager.js"></script>
+    <script src="js/viewport-manager.js"></script>
+    <script src="js/command-manager.js"></script>
     <script src="js/undo-manager.js"></script>
     <script src="js/color-palette.js"></script>
+    <script src="js/color-picker.js"></script>
     <script src="js/flood-fill.js"></script>
     <script src="js/brush-engine.js"></script>
     <script src="js/image-loader.js"></script>

@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en" data-hand="right">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF6F00">
+    <title>My Coloring Book — Gallery (Improved)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+/* =============================================
+   GALLERY MOCKUP — IMPROVED
+   Dual-mode: Kids + Studio
+   Matches reimagined UI design system
+   ============================================= */
+
+:root {
+    --font: 'Nunito', -apple-system, sans-serif;
+
+    /* Glass — reduced blur for perf */
+    --glass-bg: rgba(255, 255, 255, 0.82);
+    --glass-bg-dark: rgba(15, 15, 35, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.35);
+    --glass-border-dark: rgba(255, 255, 255, 0.1);
+    --blur: 16px;
+
+    /* Brand */
+    --accent: #FF6F00;
+    --accent-light: #FFA040;
+    --accent-glow: rgba(255, 111, 0, 0.35);
+    --accent-surface: rgba(255, 111, 0, 0.08);
+
+    /* Semantic */
+    --success: #10AC84;
+    --success-glow: rgba(16, 172, 132, 0.3);
+    --danger: #EE5A24;
+    --info: #0ABDE3;
+    --purple: #6C5CE7;
+    --pink: #FDA7DF;
+
+    /* Text */
+    --text: #1a1a2e;
+    --text-soft: #555;
+    --text-muted: #999;
+    --text-on-glass: #1a1a2e;
+    --white: #ffffff;
+
+    /* Surfaces */
+    --canvas-bg: #f2f0eb;
+    --card-bg: #ffffff;
+    --surface-hover: rgba(0,0,0,0.03);
+    --surface-active: rgba(0,0,0,0.06);
+    --divider: rgba(0,0,0,0.06);
+
+    /* Radii */
+    --r-sm: 12px;
+    --r-md: 18px;
+    --r-lg: 28px;
+    --r-xl: 40px;
+    --r-full: 9999px;
+
+    /* Shadows */
+    --shadow-float: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-card: 0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+    --shadow-glow: 0 0 24px var(--accent-glow);
+    --shadow-deep: 0 16px 48px rgba(0,0,0,0.2);
+    --shadow-tool: 0 4px 16px rgba(0,0,0,0.12);
+
+    /* Timing */
+    --t-fast: 0.15s;
+    --t-med: 0.25s;
+    --t-slow: 0.4s;
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] {
+    --glass-bg: var(--glass-bg-dark);
+    --glass-border: var(--glass-border-dark);
+    --text: #f0f0f5;
+    --text-soft: #c0c0d0;
+    --text-muted: #808098;
+    --text-on-glass: #f0f0f5;
+    --canvas-bg: #0f0f23;
+    --card-bg: #1a1a2e;
+    --surface-hover: rgba(255,255,255,0.04);
+    --surface-active: rgba(255,255,255,0.08);
+    --divider: rgba(255,255,255,0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+    .glass { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: var(--card-bg) !important; }
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: var(--font);
+    background-color: var(--canvas-bg);
+    -webkit-user-select: none; user-select: none;
+    touch-action: none;
+}
+
+.hidden { display: none !important; }
+
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--glass-border);
+}
+
+
+/* =============================================
+   MODE SWITCH — top center
+   ============================================= */
+#mode-switch {
+    position: fixed;
+    top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 600;
+    display: flex; align-items: center;
+    border-radius: var(--r-full);
+    padding: 4px; gap: 0;
+}
+
+.mode-option {
+    padding: 7px 18px;
+    border-radius: var(--r-full);
+    border: none; background: none;
+    font-family: var(--font);
+    font-size: 13px; font-weight: 800;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--t-fast);
+}
+
+.mode-option.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+/* Theme toggle */
+#theme-toggle {
+    position: fixed; top: 14px; right: 14px; z-index: 600;
+    width: 36px; height: 36px;
+    border-radius: var(--r-full); border: none; cursor: pointer;
+    font-size: 15px; display: flex; align-items: center; justify-content: center;
+    color: var(--text-soft); transition: all var(--t-fast);
+}
+
+#theme-toggle:hover { transform: scale(1.08); }
+
+
+/* =============================================
+   GALLERY OVERLAY — full-screen container
+   ============================================= */
+#gallery-overlay {
+    position: fixed; inset: 0;
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+}
+
+#gallery-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+[data-theme="dark"] #gallery-backdrop {
+    background: rgba(0,0,0,0.6);
+}
+
+
+/* =============================================
+   KIDS GALLERY — full-screen, joyful, visual
+   ============================================= */
+#kids-gallery {
+    position: relative; z-index: 1;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    background: var(--canvas-bg);
+    overflow: hidden;
+}
+
+/* Header */
+.kids-gallery-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px 12px;
+    flex-shrink: 0;
+}
+
+.kids-gallery-title {
+    font-size: 26px; font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.5px;
+}
+
+.kids-gallery-close {
+    width: 48px; height: 48px;
+    border-radius: var(--r-full);
+    border: none;
+    background: rgba(0,0,0,0.06);
+    color: var(--text-muted);
+    font-size: 24px; font-weight: 900;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+}
+
+[data-theme="dark"] .kids-gallery-close { background: rgba(255,255,255,0.06); }
+.kids-gallery-close:hover { transform: scale(1.08); background: rgba(0,0,0,0.1); }
+
+/* Tab bar — emoji categories, scrollable */
+.kids-tab-bar {
+    display: flex; gap: 6px;
+    padding: 0 24px 14px;
+    overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.kids-tab-bar::-webkit-scrollbar { display: none; }
+
+.kids-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 14px;
+    border-radius: var(--r-lg);
+    border: 3px solid transparent;
+    background: var(--surface-hover);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: var(--font);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-tab:hover { background: var(--surface-active); }
+
+.kids-tab.active {
+    border-color: var(--accent);
+    background: var(--accent-surface);
+}
+
+.kids-tab-icon { font-size: 26px; line-height: 1; }
+.kids-tab-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.kids-tab.active .kids-tab-label { color: var(--accent); }
+
+/* Scrollable grid area */
+.kids-gallery-scroll {
+    flex: 1;
+    overflow-y: auto; overflow-x: hidden;
+    padding: 0 24px 100px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Template grid */
+.kids-template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+/* Template card */
+.kids-template-card {
+    aspect-ratio: 1;
+    border-radius: var(--r-lg);
+    border: 4px solid rgba(255,255,255,0.9);
+    background: var(--card-bg);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.2s var(--ease-spring);
+    box-shadow: var(--shadow-card);
+    animation: card-pop 0.4s var(--ease-spring) both;
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-theme="dark"] .kids-template-card {
+    border-color: rgba(255,255,255,0.08);
+    background: var(--card-bg);
+}
+
+.kids-template-card:hover { transform: scale(1.04); border-color: var(--accent); }
+.kids-template-card:active { transform: scale(0.96); }
+
+@keyframes card-pop {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Staggered animation delays */
+.kids-template-card:nth-child(1) { animation-delay: 0ms; }
+.kids-template-card:nth-child(2) { animation-delay: 40ms; }
+.kids-template-card:nth-child(3) { animation-delay: 80ms; }
+.kids-template-card:nth-child(4) { animation-delay: 120ms; }
+.kids-template-card:nth-child(5) { animation-delay: 160ms; }
+.kids-template-card:nth-child(6) { animation-delay: 200ms; }
+.kids-template-card:nth-child(7) { animation-delay: 240ms; }
+.kids-template-card:nth-child(8) { animation-delay: 280ms; }
+.kids-template-card:nth-child(9) { animation-delay: 320ms; }
+
+.kids-template-thumb {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px;
+    background: linear-gradient(135deg, #fafafa, #f0f0f0);
+}
+
+[data-theme="dark"] .kids-template-thumb {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+/* Difficulty stars */
+.kids-template-difficulty {
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 3px; font-size: 12px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+/* "New" badge */
+.kids-badge-new {
+    position: absolute; top: 8px; right: 8px;
+    padding: 3px 8px; border-radius: var(--r-full);
+    background: linear-gradient(135deg, #EE5A24, #FF6348);
+    color: white; font-size: 10px; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(238,90,36,0.3);
+    animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+/* Guided mode star badge */
+.kids-badge-guided {
+    position: absolute; top: 8px; left: 8px;
+    width: 26px; height: 26px;
+    border-radius: var(--r-full);
+    background: var(--accent);
+    color: white; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* Upload card */
+.kids-upload-card {
+    aspect-ratio: 1;
+    border-radius: var(--r-lg);
+    border: 4px dashed rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.4);
+    cursor: pointer;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.2s ease;
+    animation: card-pop 0.4s var(--ease-spring) both;
+    animation-delay: 360ms;
+}
+
+[data-theme="dark"] .kids-upload-card { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); }
+.kids-upload-card:hover { border-color: var(--accent); background: rgba(255,111,0,0.06); transform: scale(1.04); }
+
+.kids-upload-icon { font-size: 38px; }
+.kids-upload-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
+
+
+/* === KIDS: My Art cards === */
+.kids-art-card {
+    aspect-ratio: 1;
+    border-radius: var(--r-lg);
+    border: 4px solid rgba(255,255,255,0.85);
+    background: white;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: all 0.2s var(--ease-spring);
+    box-shadow: var(--shadow-card);
+    animation: card-pop 0.4s var(--ease-spring) both;
+}
+
+[data-theme="dark"] .kids-art-card { background: var(--card-bg); border-color: rgba(255,255,255,0.08); }
+.kids-art-card:hover { transform: scale(1.05); border-color: var(--accent); }
+
+.kids-art-thumb {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 50px;
+    background: linear-gradient(135deg, #fef9f0, #fdf2e0);
+}
+
+[data-theme="dark"] .kids-art-thumb { background: linear-gradient(135deg, #1a1a2e, #1e1e3a); }
+
+/* Progress ring on My Art cards */
+.kids-art-progress {
+    position: absolute; bottom: 6px; right: 6px;
+    width: 32px; height: 32px;
+}
+
+.kids-art-progress svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.kids-art-progress-track { fill: none; stroke: rgba(0,0,0,0.06); stroke-width: 3; }
+.kids-art-progress-fill { fill: none; stroke-width: 3; stroke-linecap: round; }
+
+[data-theme="dark"] .kids-art-progress-track { stroke: rgba(255,255,255,0.06); }
+
+.kids-art-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 6px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.5));
+    border-radius: 0 0 calc(var(--r-lg) - 4px) calc(var(--r-lg) - 4px);
+    font-size: 11px; font-weight: 800;
+    color: white;
+    text-align: center;
+}
+
+/* Delete badge on hover */
+.kids-art-delete {
+    position: absolute; top: -4px; right: -4px;
+    width: 26px; height: 26px;
+    border-radius: var(--r-full);
+    border: 2px solid white;
+    background: var(--danger);
+    color: white; font-size: 13px; font-weight: 900;
+    display: none; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 2;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.kids-art-card:hover .kids-art-delete { display: flex; }
+
+
+/* === KIDS: Footer actions === */
+.kids-gallery-footer {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; gap: 10px; justify-content: center;
+    padding: 16px 24px 24px;
+    background: linear-gradient(transparent, var(--canvas-bg) 40%);
+    z-index: 5;
+}
+
+.kids-gallery-action-btn {
+    padding: 12px 24px;
+    border-radius: var(--r-full);
+    border: none;
+    font-family: var(--font);
+    font-size: 15px; font-weight: 800;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: all var(--t-fast);
+    box-shadow: var(--shadow-tool);
+}
+
+.kids-gallery-action-btn:hover { transform: scale(1.03); }
+.kids-gallery-action-btn:active { transform: scale(0.97); }
+
+.kids-btn-upload {
+    background: linear-gradient(135deg, var(--success), #1DD1A1);
+    color: white;
+}
+
+.kids-btn-reference {
+    background: linear-gradient(135deg, var(--info), #48DBFB);
+    color: white;
+}
+
+
+/* =============================================
+   STUDIO GALLERY — glass panel, metadata-rich
+   ============================================= */
+#studio-gallery {
+    position: relative; z-index: 1;
+    width: 520px; max-width: 95vw;
+    max-height: 90vh;
+    border-radius: var(--r-lg);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-deep);
+}
+
+/* Header */
+.studio-gallery-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 0;
+    flex-shrink: 0;
+}
+
+.studio-gallery-title {
+    font-size: 20px; font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.3px;
+}
+
+.studio-gallery-close {
+    width: 36px; height: 36px;
+    border-radius: var(--r-full);
+    border: none;
+    background: rgba(0,0,0,0.04);
+    color: var(--text-muted);
+    font-size: 18px; font-weight: 900;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--t-fast);
+}
+
+[data-theme="dark"] .studio-gallery-close { background: rgba(255,255,255,0.06); }
+.studio-gallery-close:hover { transform: scale(1.08); }
+
+/* Tabs */
+.studio-tabs {
+    display: flex; gap: 0; padding: 14px 22px 0;
+    border-bottom: 2px solid var(--divider);
+    flex-shrink: 0;
+}
+
+.studio-tab {
+    padding: 10px 18px;
+    border: none; background: none;
+    font-family: var(--font);
+    font-size: 14px; font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all var(--t-fast);
+}
+
+.studio-tab:hover { color: var(--text-soft); }
+
+.studio-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+    font-weight: 800;
+}
+
+/* Scrollable content */
+.studio-gallery-scroll {
+    flex: 1;
+    overflow-y: auto; overflow-x: hidden;
+    padding: 18px 22px 22px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Category filter pills */
+.studio-filters {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.studio-filter-pill {
+    padding: 6px 14px;
+    border-radius: var(--r-full);
+    border: 2px solid var(--divider);
+    background: none;
+    font-family: var(--font);
+    font-size: 12px; font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--t-fast);
+    display: flex; align-items: center; gap: 5px;
+}
+
+.studio-filter-pill:hover { border-color: var(--accent-light); color: var(--accent); }
+
+.studio-filter-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.filter-count {
+    font-size: 10px; font-weight: 800;
+    opacity: 0.7;
+}
+
+/* Upload zone */
+.studio-upload-zone {
+    border: 2px dashed var(--divider);
+    border-radius: var(--r-md);
+    padding: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 18px;
+}
+
+.studio-upload-zone:hover { border-color: var(--accent); background: var(--accent-surface); }
+.studio-upload-zone.dragover { border-color: var(--accent); background: var(--accent-surface); border-style: solid; }
+
+.studio-upload-icon { font-size: 26px; opacity: 0.5; }
+.studio-upload-text { font-size: 13px; font-weight: 700; color: var(--text-soft); }
+.studio-upload-hint { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+
+.studio-upload-buttons {
+    display: flex; gap: 8px; margin-top: 8px;
+}
+
+.studio-upload-btn {
+    padding: 7px 16px;
+    border-radius: var(--r-full); border: none;
+    font-family: var(--font);
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all var(--t-fast);
+    color: white;
+}
+
+.studio-upload-btn:hover { transform: scale(1.03); }
+.studio-upload-btn-outline { background: var(--success); }
+.studio-upload-btn-reference { background: var(--info); }
+
+/* Template grid */
+.studio-template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+/* Template card */
+.studio-template-card {
+    border-radius: var(--r-md);
+    background: var(--card-bg);
+    border: 2px solid transparent;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    animation: studio-card-in 0.35s var(--ease-out) both;
+}
+
+.studio-template-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card), 0 8px 24px rgba(0,0,0,0.1);
+}
+
+@keyframes studio-card-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.studio-template-card:nth-child(1) { animation-delay: 0ms; }
+.studio-template-card:nth-child(2) { animation-delay: 30ms; }
+.studio-template-card:nth-child(3) { animation-delay: 60ms; }
+.studio-template-card:nth-child(4) { animation-delay: 90ms; }
+.studio-template-card:nth-child(5) { animation-delay: 120ms; }
+.studio-template-card:nth-child(6) { animation-delay: 150ms; }
+.studio-template-card:nth-child(7) { animation-delay: 180ms; }
+.studio-template-card:nth-child(8) { animation-delay: 210ms; }
+.studio-template-card:nth-child(9) { animation-delay: 240ms; }
+
+.studio-template-preview {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 44px;
+    background: linear-gradient(135deg, #fafafa, #f5f5f5);
+    position: relative;
+}
+
+[data-theme="dark"] .studio-template-preview { background: linear-gradient(135deg, #16213e, #1a1a2e); }
+
+.studio-template-meta {
+    padding: 10px 12px 12px;
+}
+
+.studio-template-name {
+    font-size: 13px; font-weight: 800;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.studio-template-info {
+    display: flex; align-items: center; gap: 8px;
+}
+
+.studio-template-difficulty { display: flex; gap: 2px; font-size: 10px; }
+.studio-template-category { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
+/* Suggested palette dots */
+.studio-template-palette {
+    display: flex; gap: 3px; margin-top: 6px;
+}
+
+.studio-palette-dot {
+    width: 14px; height: 14px;
+    border-radius: var(--r-full);
+    border: 1.5px solid rgba(0,0,0,0.08);
+}
+
+/* "New" badge */
+.studio-badge-new {
+    position: absolute; top: 8px; right: 8px;
+    padding: 2px 8px; border-radius: var(--r-full);
+    background: var(--accent);
+    color: white; font-size: 10px; font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* === STUDIO: My Artwork panel === */
+.studio-sort-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.studio-sort-label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+
+.studio-sort-select {
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    border: 2px solid var(--divider);
+    background: var(--card-bg);
+    font-family: var(--font);
+    font-size: 12px; font-weight: 700;
+    color: var(--text-soft);
+    cursor: pointer;
+}
+
+.studio-art-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+.studio-art-card {
+    border-radius: var(--r-md);
+    background: var(--card-bg);
+    border: 2px solid transparent;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-card);
+    position: relative;
+    animation: studio-card-in 0.35s var(--ease-out) both;
+}
+
+.studio-art-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+.studio-art-preview {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    background: linear-gradient(135deg, #fef9f0, #fdf2e0);
+}
+
+[data-theme="dark"] .studio-art-preview { background: linear-gradient(135deg, #1a1a2e, #1e1e3a); }
+
+.studio-art-meta {
+    padding: 10px 12px;
+}
+
+.studio-art-name {
+    font-size: 12px; font-weight: 800;
+    color: var(--text);
+    margin-bottom: 3px;
+}
+
+.studio-art-info {
+    display: flex; align-items: center; justify-content: space-between;
+}
+
+.studio-art-date { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+
+/* Progress bar */
+.studio-art-progress-bar {
+    width: 100%; height: 4px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.06);
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+[data-theme="dark"] .studio-art-progress-bar { background: rgba(255,255,255,0.06); }
+
+.studio-art-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s var(--ease-out);
+}
+
+/* Status badges */
+.studio-art-status {
+    padding: 2px 8px;
+    border-radius: var(--r-full);
+    font-size: 9px; font-weight: 800;
+    text-transform: uppercase;
+}
+
+.status-progress { background: rgba(255,111,0,0.12); color: var(--accent); }
+.status-complete { background: rgba(16,172,132,0.12); color: var(--success); }
+
+/* Hover actions */
+.studio-art-actions {
+    position: absolute; top: 8px; right: 8px;
+    display: none; gap: 4px;
+}
+
+.studio-art-card:hover .studio-art-actions { display: flex; }
+
+.studio-art-action-btn {
+    width: 28px; height: 28px;
+    border-radius: var(--r-full);
+    border: none;
+    background: rgba(0,0,0,0.5);
+    color: white; font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    transition: all var(--t-fast);
+}
+
+.studio-art-action-btn:hover { background: rgba(0,0,0,0.7); transform: scale(1.1); }
+
+
+/* =============================================
+   MODE VISIBILITY
+   ============================================= */
+[data-mode="studio"] #kids-gallery { display: none !important; }
+[data-mode="kids"] #studio-gallery { display: none !important; }
+
+
+/* =============================================
+   TOAST
+   ============================================= */
+.toast {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    z-index: 700;
+    padding: 10px 24px; border-radius: var(--r-full);
+    font-size: 14px; font-weight: 700;
+    color: white; background: var(--text);
+    box-shadow: var(--shadow-deep);
+    animation: toast-up 0.3s var(--ease-spring);
+    pointer-events: none;
+}
+
+@keyframes toast-up {
+    from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+
+/* =============================================
+   CONFETTI
+   ============================================= */
+.confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 9999; overflow: hidden; }
+
+.confetti-piece {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    animation: confetti-fall 1.2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+    100% { opacity: 0; transform: translateY(80vh) rotate(720deg) scale(0.5); }
+}
+
+/* Screen reader */
+#sr-announce { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 480px) {
+    .kids-template-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kids-gallery-title { font-size: 22px; }
+    .kids-tab-icon { font-size: 22px; }
+    .kids-tab { padding: 6px 10px; }
+    .kids-gallery-action-btn { font-size: 13px; padding: 10px 18px; }
+
+    .studio-template-grid { grid-template-columns: repeat(2, 1fr); }
+    .studio-art-grid { grid-template-columns: repeat(2, 1fr); }
+    #studio-gallery { max-width: 100%; max-height: 100vh; border-radius: 0; }
+}
+
+@media (min-width: 768px) {
+    .kids-template-grid { grid-template-columns: repeat(4, 1fr); }
+    .studio-template-grid { grid-template-columns: repeat(3, 1fr); }
+    .studio-art-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (min-width: 1024px) {
+    .kids-template-grid { grid-template-columns: repeat(5, 1fr); }
+    #studio-gallery { width: 580px; }
+}
+
+    </style>
+</head>
+<body data-mode="kids">
+
+<!-- Screen reader announcements -->
+<div id="sr-announce" aria-live="polite" role="status"></div>
+
+<!-- Confetti container -->
+<div class="confetti-container" id="confetti-container"></div>
+
+<!-- =============================================
+     MODE SWITCH
+     ============================================= -->
+<div id="mode-switch" class="glass">
+    <button class="mode-option active" id="mode-kids" onclick="setMode('kids')" aria-selected="true">
+        <span>&#x1F476;</span> Kids
+    </button>
+    <button class="mode-option" id="mode-studio" onclick="setMode('studio')" aria-selected="false">
+        <span>&#x1F3A8;</span> Studio
+    </button>
+</div>
+
+<button id="theme-toggle" class="glass" onclick="toggleTheme()" aria-label="Toggle dark mode">&#x1F319;</button>
+
+
+<!-- =============================================
+     GALLERY OVERLAY
+     ============================================= -->
+<div id="gallery-overlay">
+    <div id="gallery-backdrop"></div>
+
+    <!-- ==========================================
+         KIDS GALLERY — full screen, joyful
+         ========================================== -->
+    <div id="kids-gallery" role="dialog" aria-label="Gallery">
+
+        <!-- Header -->
+        <div class="kids-gallery-header">
+            <div class="kids-gallery-title">&#x1F3A8; Pick a Picture!</div>
+            <button class="kids-gallery-close" onclick="closeGallery()" aria-label="Close gallery">&times;</button>
+        </div>
+
+        <!-- Category tabs -->
+        <div class="kids-tab-bar" role="tablist" aria-label="Categories">
+            <button class="kids-tab active" onclick="kidsSelectTab(this, 'all')" data-tab="all" role="tab">
+                <span class="kids-tab-icon">&#x2B50;</span>
+                <span class="kids-tab-label">All</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'animals')" data-tab="animals" role="tab">
+                <span class="kids-tab-icon">&#x1F436;</span>
+                <span class="kids-tab-label">Animals</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'nature')" data-tab="nature" role="tab">
+                <span class="kids-tab-icon">&#x1F33B;</span>
+                <span class="kids-tab-label">Nature</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'vehicles')" data-tab="vehicles" role="tab">
+                <span class="kids-tab-icon">&#x1F697;</span>
+                <span class="kids-tab-label">Vehicles</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'fantasy')" data-tab="fantasy" role="tab">
+                <span class="kids-tab-icon">&#x1F984;</span>
+                <span class="kids-tab-label">Fantasy</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'space')" data-tab="space" role="tab">
+                <span class="kids-tab-icon">&#x1F680;</span>
+                <span class="kids-tab-label">Space</span>
+            </button>
+            <button class="kids-tab" onclick="kidsSelectTab(this, 'my-art')" data-tab="my-art" role="tab">
+                <span class="kids-tab-icon">&#x1F5BC;</span>
+                <span class="kids-tab-label">My Art</span>
+            </button>
+        </div>
+
+        <!-- Scrollable content -->
+        <div class="kids-gallery-scroll" id="kids-gallery-scroll">
+
+            <!-- Templates -->
+            <div id="kids-templates-panel">
+                <div class="kids-template-grid" id="kids-template-grid">
+                    <!-- Cat -->
+                    <div class="kids-template-card" data-category="animals" onclick="kidsPickTemplate(this, 'Cat')">
+                        <div class="kids-template-thumb">&#x1F431;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span></div>
+                    </div>
+                    <!-- Dog -->
+                    <div class="kids-template-card" data-category="animals" onclick="kidsPickTemplate(this, 'Dog')">
+                        <div class="kids-template-thumb">&#x1F436;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span></div>
+                    </div>
+                    <!-- Butterfly (New) -->
+                    <div class="kids-template-card" data-category="animals" onclick="kidsPickTemplate(this, 'Butterfly')">
+                        <div class="kids-badge-new">NEW</div>
+                        <div class="kids-template-thumb">&#x1F98B;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Fish -->
+                    <div class="kids-template-card" data-category="animals" onclick="kidsPickTemplate(this, 'Fish')">
+                        <div class="kids-badge-guided">⭐</div>
+                        <div class="kids-template-thumb">&#x1F420;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span></div>
+                    </div>
+                    <!-- Flower -->
+                    <div class="kids-template-card" data-category="nature" onclick="kidsPickTemplate(this, 'Flower')">
+                        <div class="kids-template-thumb">&#x1F33B;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span></div>
+                    </div>
+                    <!-- Tree -->
+                    <div class="kids-template-card" data-category="nature" onclick="kidsPickTemplate(this, 'Tree')">
+                        <div class="kids-template-thumb">&#x1F333;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Mountain -->
+                    <div class="kids-template-card" data-category="nature" onclick="kidsPickTemplate(this, 'Mountain')">
+                        <div class="kids-template-thumb">&#x1F3D4;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Car -->
+                    <div class="kids-template-card" data-category="vehicles" onclick="kidsPickTemplate(this, 'Car')">
+                        <div class="kids-template-thumb">&#x1F697;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span></div>
+                    </div>
+                    <!-- Rocket -->
+                    <div class="kids-template-card" data-category="space" onclick="kidsPickTemplate(this, 'Rocket')">
+                        <div class="kids-badge-guided">⭐</div>
+                        <div class="kids-template-thumb">&#x1F680;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Unicorn -->
+                    <div class="kids-template-card" data-category="fantasy" onclick="kidsPickTemplate(this, 'Unicorn')">
+                        <div class="kids-badge-new">NEW</div>
+                        <div class="kids-template-thumb">&#x1F984;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Dragon -->
+                    <div class="kids-template-card" data-category="fantasy" onclick="kidsPickTemplate(this, 'Dragon')">
+                        <div class="kids-template-thumb">&#x1F409;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Saturn -->
+                    <div class="kids-template-card" data-category="space" onclick="kidsPickTemplate(this, 'Saturn')">
+                        <div class="kids-template-thumb">&#x1FA90;</div>
+                        <div class="kids-template-difficulty"><span>⭐</span><span>⭐</span></div>
+                    </div>
+                    <!-- Upload card (always last) -->
+                    <div class="kids-upload-card" onclick="showToast('Upload your picture! 📷')">
+                        <span class="kids-upload-icon">➕</span>
+                        <span class="kids-upload-label">Upload</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Art panel (hidden by default) -->
+            <div id="kids-my-art-panel" class="hidden">
+                <div class="kids-template-grid">
+                    <!-- Saved artwork 1 — in progress -->
+                    <div class="kids-art-card" onclick="showToast('Continue coloring! 🎨')">
+                        <div class="kids-art-thumb">&#x1F431;</div>
+                        <div class="kids-art-progress">
+                            <svg viewBox="0 0 36 36">
+                                <circle class="kids-art-progress-track" cx="18" cy="18" r="15.5" />
+                                <circle class="kids-art-progress-fill" cx="18" cy="18" r="15.5"
+                                    stroke-dasharray="97.4" stroke-dashoffset="36.5"
+                                    style="stroke: var(--accent);" />
+                            </svg>
+                        </div>
+                        <div class="kids-art-label">My Cat 🐱</div>
+                        <button class="kids-art-delete" onclick="event.stopPropagation(); showToast('Deleted!')" aria-label="Delete">×</button>
+                    </div>
+                    <!-- Saved artwork 2 — complete -->
+                    <div class="kids-art-card" onclick="showToast('Beautiful work! ✨')">
+                        <div class="kids-art-thumb">&#x1F33B;</div>
+                        <div class="kids-art-progress">
+                            <svg viewBox="0 0 36 36">
+                                <circle class="kids-art-progress-track" cx="18" cy="18" r="15.5" />
+                                <circle class="kids-art-progress-fill" cx="18" cy="18" r="15.5"
+                                    stroke-dasharray="97.4" stroke-dashoffset="0"
+                                    style="stroke: var(--success);" />
+                            </svg>
+                        </div>
+                        <div class="kids-art-label">Sunflower ✅</div>
+                        <button class="kids-art-delete" onclick="event.stopPropagation(); showToast('Deleted!')" aria-label="Delete">×</button>
+                    </div>
+                    <!-- Saved artwork 3 — in progress -->
+                    <div class="kids-art-card" onclick="showToast('Keep going! 🚀')">
+                        <div class="kids-art-thumb">&#x1F680;</div>
+                        <div class="kids-art-progress">
+                            <svg viewBox="0 0 36 36">
+                                <circle class="kids-art-progress-track" cx="18" cy="18" r="15.5" />
+                                <circle class="kids-art-progress-fill" cx="18" cy="18" r="15.5"
+                                    stroke-dasharray="97.4" stroke-dashoffset="68.2"
+                                    style="stroke: var(--info);" />
+                            </svg>
+                        </div>
+                        <div class="kids-art-label">Rocket 🚀</div>
+                        <button class="kids-art-delete" onclick="event.stopPropagation(); showToast('Deleted!')" aria-label="Delete">×</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="kids-gallery-footer">
+            <button class="kids-gallery-action-btn kids-btn-upload" onclick="showToast('Upload your picture! 📷')">
+                &#x1F4F7; Upload Picture
+            </button>
+            <button class="kids-gallery-action-btn kids-btn-reference" onclick="showToast('Upload a reference! 🖼')">
+                &#x1F5BC; Reference Guide
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ==========================================
+         STUDIO GALLERY — glass panel
+         ========================================== -->
+    <div id="studio-gallery" class="glass" role="dialog" aria-label="Gallery">
+
+        <!-- Header -->
+        <div class="studio-gallery-header">
+            <div class="studio-gallery-title">Gallery</div>
+            <button class="studio-gallery-close" onclick="closeGallery()" aria-label="Close gallery">&times;</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="studio-tabs" role="tablist">
+            <button class="studio-tab active" id="studio-tab-templates" onclick="studioSelectTab('templates')" role="tab">Templates</button>
+            <button class="studio-tab" id="studio-tab-my-art" onclick="studioSelectTab('my-art')" role="tab">My Artwork</button>
+        </div>
+
+        <!-- Scrollable content -->
+        <div class="studio-gallery-scroll">
+
+            <!-- Templates panel -->
+            <div id="studio-templates-panel">
+
+                <!-- Filters -->
+                <div class="studio-filters">
+                    <button class="studio-filter-pill active" onclick="studioFilter(this, 'all')">All <span class="filter-count">12</span></button>
+                    <button class="studio-filter-pill" onclick="studioFilter(this, 'animals')">&#x1F43E; Animals <span class="filter-count">4</span></button>
+                    <button class="studio-filter-pill" onclick="studioFilter(this, 'nature')">&#x1F33F; Nature <span class="filter-count">3</span></button>
+                    <button class="studio-filter-pill" onclick="studioFilter(this, 'vehicles')">&#x1F697; Vehicles <span class="filter-count">1</span></button>
+                    <button class="studio-filter-pill" onclick="studioFilter(this, 'fantasy')">&#x2728; Fantasy <span class="filter-count">2</span></button>
+                    <button class="studio-filter-pill" onclick="studioFilter(this, 'space')">&#x1F680; Space <span class="filter-count">2</span></button>
+                </div>
+
+                <!-- Upload zone -->
+                <div class="studio-upload-zone" id="studio-dropzone" onclick="showToast('File picker opened')">
+                    <div class="studio-upload-icon">&#x1F4C1;</div>
+                    <div class="studio-upload-text">Drop an image or click to upload</div>
+                    <div class="studio-upload-hint">SVG, PNG, or JPG — any size</div>
+                    <div class="studio-upload-buttons">
+                        <button class="studio-upload-btn studio-upload-btn-outline" onclick="event.stopPropagation(); showToast('Upload outline')">Upload Outline</button>
+                        <button class="studio-upload-btn studio-upload-btn-reference" onclick="event.stopPropagation(); showToast('Upload reference')">Upload Reference</button>
+                    </div>
+                </div>
+
+                <!-- Grid -->
+                <div class="studio-template-grid" id="studio-template-grid">
+                    <!-- Cat -->
+                    <div class="studio-template-card" data-category="animals" onclick="studioPickTemplate(this, 'Cat')">
+                        <div class="studio-template-preview">&#x1F431;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Cat</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Animals</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FF9F43;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                                <div class="studio-palette-dot" style="background:#48DBFB;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dog -->
+                    <div class="studio-template-card" data-category="animals" onclick="studioPickTemplate(this, 'Dog')">
+                        <div class="studio-template-preview">&#x1F436;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Dog</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐</div>
+                                <div class="studio-template-category">Animals</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#A0522D;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Butterfly (New) -->
+                    <div class="studio-template-card" data-category="animals" onclick="studioPickTemplate(this, 'Butterfly')">
+                        <div class="studio-template-preview">&#x1F98B;<div class="studio-badge-new">NEW</div></div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Butterfly</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Animals</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FF6B6B;"></div>
+                                <div class="studio-palette-dot" style="background:#FDA7DF;"></div>
+                                <div class="studio-palette-dot" style="background:#6C5CE7;"></div>
+                                <div class="studio-palette-dot" style="background:#48DBFB;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Fish -->
+                    <div class="studio-template-card" data-category="animals" onclick="studioPickTemplate(this, 'Fish')">
+                        <div class="studio-template-preview">&#x1F420;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Tropical Fish</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐</div>
+                                <div class="studio-template-category">Animals</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FF9F43;"></div>
+                                <div class="studio-palette-dot" style="background:#48DBFB;"></div>
+                                <div class="studio-palette-dot" style="background:#0ABDE3;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Flower -->
+                    <div class="studio-template-card" data-category="nature" onclick="studioPickTemplate(this, 'Flower')">
+                        <div class="studio-template-preview">&#x1F33B;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Sunflower</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐</div>
+                                <div class="studio-template-category">Nature</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                                <div class="studio-palette-dot" style="background:#FF9F43;"></div>
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Tree -->
+                    <div class="studio-template-card" data-category="nature" onclick="studioPickTemplate(this, 'Tree')">
+                        <div class="studio-template-preview">&#x1F333;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Oak Tree</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Nature</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                                <div class="studio-palette-dot" style="background:#A0522D;"></div>
+                                <div class="studio-palette-dot" style="background:#48DBFB;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mountain -->
+                    <div class="studio-template-card" data-category="nature" onclick="studioPickTemplate(this, 'Mountain')">
+                        <div class="studio-template-preview">&#x1F3D4;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Mountain Range</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐⭐</div>
+                                <div class="studio-template-category">Nature</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#576574;"></div>
+                                <div class="studio-palette-dot" style="background:#48DBFB;"></div>
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Car -->
+                    <div class="studio-template-card" data-category="vehicles" onclick="studioPickTemplate(this, 'Car')">
+                        <div class="studio-template-preview">&#x1F697;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Race Car</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐</div>
+                                <div class="studio-template-category">Vehicles</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#EE5A24;"></div>
+                                <div class="studio-palette-dot" style="background:#576574;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rocket -->
+                    <div class="studio-template-card" data-category="space" onclick="studioPickTemplate(this, 'Rocket')">
+                        <div class="studio-template-preview">&#x1F680;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Rocket Ship</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Space</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#C0C0C0;"></div>
+                                <div class="studio-palette-dot" style="background:#EE5A24;"></div>
+                                <div class="studio-palette-dot" style="background:#2C3A47;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Unicorn -->
+                    <div class="studio-template-card" data-category="fantasy" onclick="studioPickTemplate(this, 'Unicorn')">
+                        <div class="studio-template-preview">&#x1F984;<div class="studio-badge-new">NEW</div></div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Unicorn</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Fantasy</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FDA7DF;"></div>
+                                <div class="studio-palette-dot" style="background:#6C5CE7;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dragon -->
+                    <div class="studio-template-card" data-category="fantasy" onclick="studioPickTemplate(this, 'Dragon')">
+                        <div class="studio-template-preview">&#x1F409;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Dragon</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐⭐</div>
+                                <div class="studio-template-category">Fantasy</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#10AC84;"></div>
+                                <div class="studio-palette-dot" style="background:#EE5A24;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                                <div class="studio-palette-dot" style="background:#2C3A47;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Saturn -->
+                    <div class="studio-template-card" data-category="space" onclick="studioPickTemplate(this, 'Saturn')">
+                        <div class="studio-template-preview">&#x1FA90;</div>
+                        <div class="studio-template-meta">
+                            <div class="studio-template-name">Saturn</div>
+                            <div class="studio-template-info">
+                                <div class="studio-template-difficulty">⭐⭐</div>
+                                <div class="studio-template-category">Space</div>
+                            </div>
+                            <div class="studio-template-palette">
+                                <div class="studio-palette-dot" style="background:#FF9F43;"></div>
+                                <div class="studio-palette-dot" style="background:#FECA57;"></div>
+                                <div class="studio-palette-dot" style="background:#2C3A47;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Artwork panel -->
+            <div id="studio-my-art-panel" class="hidden">
+                <div class="studio-sort-bar">
+                    <span class="studio-sort-label">5 artworks</span>
+                    <select class="studio-sort-select">
+                        <option>Newest first</option>
+                        <option>Oldest first</option>
+                        <option>In progress</option>
+                        <option>Completed</option>
+                    </select>
+                </div>
+
+                <div class="studio-art-grid">
+                    <!-- Artwork 1 — in progress -->
+                    <div class="studio-art-card" onclick="showToast('Resuming...')">
+                        <div class="studio-art-preview">&#x1F431;</div>
+                        <div class="studio-art-actions">
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Shared!')" title="Share" aria-label="Share">↗</button>
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Deleted!')" title="Delete" aria-label="Delete">×</button>
+                        </div>
+                        <div class="studio-art-meta">
+                            <div class="studio-art-name">Cat Portrait</div>
+                            <div class="studio-art-info">
+                                <span class="studio-art-date">2 hours ago</span>
+                                <span class="studio-art-status status-progress">63%</span>
+                            </div>
+                            <div class="studio-art-progress-bar">
+                                <div class="studio-art-progress-fill" style="width:63%; background: var(--accent);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Artwork 2 — complete -->
+                    <div class="studio-art-card" onclick="showToast('Opening...')">
+                        <div class="studio-art-preview">&#x1F98B;</div>
+                        <div class="studio-art-actions">
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Shared!')" title="Share">↗</button>
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Deleted!')" title="Delete">×</button>
+                        </div>
+                        <div class="studio-art-meta">
+                            <div class="studio-art-name">Butterfly Garden</div>
+                            <div class="studio-art-info">
+                                <span class="studio-art-date">Yesterday</span>
+                                <span class="studio-art-status status-complete">Done</span>
+                            </div>
+                            <div class="studio-art-progress-bar">
+                                <div class="studio-art-progress-fill" style="width:100%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Artwork 3 — in progress -->
+                    <div class="studio-art-card" onclick="showToast('Resuming...')">
+                        <div class="studio-art-preview">&#x1F680;</div>
+                        <div class="studio-art-actions">
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Shared!')" title="Share">↗</button>
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Deleted!')" title="Delete">×</button>
+                        </div>
+                        <div class="studio-art-meta">
+                            <div class="studio-art-name">Rocket Launch</div>
+                            <div class="studio-art-info">
+                                <span class="studio-art-date">3 days ago</span>
+                                <span class="studio-art-status status-progress">30%</span>
+                            </div>
+                            <div class="studio-art-progress-bar">
+                                <div class="studio-art-progress-fill" style="width:30%; background: var(--info);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Artwork 4 — complete -->
+                    <div class="studio-art-card" onclick="showToast('Opening...')">
+                        <div class="studio-art-preview">&#x1F33B;</div>
+                        <div class="studio-art-actions">
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Shared!')" title="Share">↗</button>
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Deleted!')" title="Delete">×</button>
+                        </div>
+                        <div class="studio-art-meta">
+                            <div class="studio-art-name">Sunflower Field</div>
+                            <div class="studio-art-info">
+                                <span class="studio-art-date">Last week</span>
+                                <span class="studio-art-status status-complete">Done</span>
+                            </div>
+                            <div class="studio-art-progress-bar">
+                                <div class="studio-art-progress-fill" style="width:100%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Artwork 5 — in progress -->
+                    <div class="studio-art-card" onclick="showToast('Resuming...')">
+                        <div class="studio-art-preview">&#x1F984;</div>
+                        <div class="studio-art-actions">
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Shared!')" title="Share">↗</button>
+                            <button class="studio-art-action-btn" onclick="event.stopPropagation(); showToast('Deleted!')" title="Delete">×</button>
+                        </div>
+                        <div class="studio-art-meta">
+                            <div class="studio-art-name">Unicorn Dreams</div>
+                            <div class="studio-art-info">
+                                <span class="studio-art-date">Last week</span>
+                                <span class="studio-art-status status-progress">45%</span>
+                            </div>
+                            <div class="studio-art-progress-bar">
+                                <div class="studio-art-progress-fill" style="width:45%; background: var(--purple);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" style="display:none;" role="status" aria-live="polite">Saved!</div>
+
+
+<!-- =============================================
+     SCRIPTS
+     ============================================= -->
+<script>
+let currentMode = 'kids';
+
+// === MODE SWITCHING ===
+function setMode(mode) {
+    currentMode = mode;
+    document.body.setAttribute('data-mode', mode);
+    document.documentElement.setAttribute('data-mode', mode);
+    document.getElementById('mode-kids').classList.toggle('active', mode === 'kids');
+    document.getElementById('mode-studio').classList.toggle('active', mode === 'studio');
+    announce(mode === 'kids' ? 'Kids mode' : 'Studio mode');
+}
+
+// === THEME ===
+function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? '' : 'dark');
+}
+
+// === KIDS: Tab selection ===
+function kidsSelectTab(el, tab) {
+    document.querySelectorAll('.kids-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+
+    const templatesPanel = document.getElementById('kids-templates-panel');
+    const myArtPanel = document.getElementById('kids-my-art-panel');
+
+    if (tab === 'my-art') {
+        templatesPanel.classList.add('hidden');
+        myArtPanel.classList.remove('hidden');
+    } else {
+        templatesPanel.classList.remove('hidden');
+        myArtPanel.classList.add('hidden');
+        // Filter templates
+        kidsFilterTemplates(tab);
+    }
+
+    announce(tab === 'my-art' ? 'My artwork' : tab + ' templates');
+}
+
+function kidsFilterTemplates(category) {
+    const cards = document.querySelectorAll('#kids-template-grid .kids-template-card');
+    cards.forEach((card, i) => {
+        const cat = card.getAttribute('data-category');
+        const show = category === 'all' || cat === category;
+        card.style.display = show ? '' : 'none';
+        if (show) {
+            card.style.animation = 'none';
+            card.offsetHeight;
+            card.style.animation = `card-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both`;
+            card.style.animationDelay = `${i * 40}ms`;
+        }
+    });
+    // Always show upload card
+    const upload = document.querySelector('.kids-upload-card');
+    if (upload) upload.style.display = '';
+}
+
+function kidsPickTemplate(el, name) {
+    spawnConfetti();
+    showToast(`Let's color the ${name}! 🎨`);
+}
+
+// === STUDIO: Tab selection ===
+function studioSelectTab(tab) {
+    document.getElementById('studio-tab-templates').classList.toggle('active', tab === 'templates');
+    document.getElementById('studio-tab-my-art').classList.toggle('active', tab === 'my-art');
+    document.getElementById('studio-templates-panel').classList.toggle('hidden', tab !== 'templates');
+    document.getElementById('studio-my-art-panel').classList.toggle('hidden', tab !== 'my-art');
+}
+
+// === STUDIO: Category filter ===
+function studioFilter(el, category) {
+    document.querySelectorAll('.studio-filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+
+    const cards = document.querySelectorAll('#studio-template-grid .studio-template-card');
+    cards.forEach((card, i) => {
+        const cat = card.getAttribute('data-category');
+        const show = category === 'all' || cat === category;
+        card.style.display = show ? '' : 'none';
+        if (show) {
+            card.style.animation = 'none';
+            card.offsetHeight;
+            card.style.animation = `studio-card-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both`;
+            card.style.animationDelay = `${i * 30}ms`;
+        }
+    });
+}
+
+function studioPickTemplate(el, name) {
+    showToast(`Opening ${name}...`);
+}
+
+// === GALLERY CLOSE ===
+function closeGallery() {
+    showToast('Gallery closed');
+}
+
+// === TOAST ===
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = '';
+    t.style.animation = 'none';
+    t.offsetHeight;
+    t.style.animation = '';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.display = 'none'; }, 2000);
+}
+
+// === CONFETTI ===
+function spawnConfetti() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const container = document.getElementById('confetti-container');
+    const colors = ['#FF6F00', '#FF6B6B', '#48DBFB', '#10AC84', '#6C5CE7', '#FECA57', '#FDA7DF', '#EE5A24'];
+    for (let i = 0; i < 30; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = (Math.random() * 100) + '%';
+        piece.style.top = '-10px';
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = (Math.random() * 0.4) + 's';
+        piece.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+        piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+        container.appendChild(piece);
+        setTimeout(() => piece.remove(), 2000);
+    }
+}
+
+// === ANNOUNCE (screen reader) ===
+function announce(msg) {
+    const el = document.getElementById('sr-announce');
+    el.textContent = '';
+    setTimeout(() => { el.textContent = msg; }, 50);
+}
+
+// === STUDIO: Drag-drop on upload zone ===
+(function() {
+    const zone = document.getElementById('studio-dropzone');
+    if (!zone) return;
+    ['dragenter','dragover'].forEach(e => zone.addEventListener(e, (ev) => { ev.preventDefault(); zone.classList.add('dragover'); }));
+    ['dragleave','drop'].forEach(e => zone.addEventListener(e, () => { zone.classList.remove('dragover'); }));
+    zone.addEventListener('drop', (e) => { e.preventDefault(); showToast('File uploaded!'); });
+})();
+
+// Auto dark mode
+if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+
+// Init
+setMode('kids');
+</script>
+</body>
+</html>

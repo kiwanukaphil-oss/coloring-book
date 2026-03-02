@@ -27,19 +27,24 @@
     // 1. Touch guards first (prevent browser gesture interference)
     // 2. Feedback manager (spinner + toast ready for use)
     // 3. Canvas system (everything else depends on this)
-    // 4. Undo manager (no init needed — ready immediately)
-    // 5. Color palette (standalone UI)
-    // 6. Brush engine (needs canvas + color palette + toolbar)
-    // 7. Image loader (needs canvas + undo manager)
-    // 8. Toolbar (wires up all other modules)
-    // 9. Progress manager (registers visibilitychange listener)
+    // 4. Viewport manager (needs canvas container for zoom/pan, ADR-009)
+    // 5. Undo manager (no init needed — ready immediately)
+    // 6. Color palette (standalone UI)
+    // 7. Brush engine (needs canvas + color palette + toolbar)
+    // 8. Image loader (needs canvas + undo manager)
+    // 9. Toolbar (wires up all other modules)
+    // 10. Mode manager wires kid/studio delegation (needs Toolbar initialized)
+    // 11. Progress manager (registers visibilitychange listener)
     TouchGuard.initialize();
     FeedbackManager.initialize();
     CanvasManager.initialize();
+    ViewportManager.initialize();
     ColorPalette.initialize();
+    ColorPicker.initialize();
     BrushEngine.initialize();
     ImageLoader.initialize();
     Toolbar.initialize();
+    ModeManager.initialize();
     ProgressManager.initialize();
 
     registerServiceWorker();
