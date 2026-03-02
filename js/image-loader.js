@@ -3,12 +3,16 @@
  *
  * Responsible for: Managing the coloring page gallery (pre-loaded thumbnails and device
  *   uploads), the saved artwork gallery ("My Art" tab), the draggable/resizable
- *   reference image panel, and loading images onto the canvas.
+ *   reference image panel, and loading images onto the canvas. Loads templates from
+ *   a JSON manifest with categories and difficulty metadata (ADR-019).
  * NOT responsible for: Canvas rendering or image processing — CanvasManager handles
  *   the actual drawing, white-pixel removal, and layer management.
  *
  * Key functions:
- *   - buildGalleryThumbnails: Creates clickable cards for each pre-loaded coloring page
+ *   - loadManifest: Fetches templates/manifest.json, falls back to hardcoded array (ADR-019)
+ *   - buildGalleryFromManifest: Renders category sections with difficulty badges
+ *   - buildGalleryThumbnails: Flat grid fallback when manifest is unavailable
+ *   - setupSearchAndSort: Wires search input (debounced 300ms) and sort dropdown
  *   - loadColoringPage: Loads a selected image onto the outline canvas, resets undo
  *   - setupUploadHandler: Wires the file input for user-uploaded coloring pages
  *   - setupReferenceUploadHandler: Wires the file input for reference guide images
@@ -24,12 +28,13 @@
  *   the entire viewport. Panel position is clamped to the canvas container bounds.
  *   Gallery cards auto-hide if their thumbnail image fails to load (file not found).
  *   Saved artwork thumbnails are loaded from IndexedDB each time the My Art tab
- *   becomes visible, ensuring freshness.
+ *   becomes visible, ensuring freshness. The manifest is the canonical template
+ *   source; PRELOADED_COLORING_PAGES is retained as a synchronous fallback (ADR-019).
  */
 
 const ImageLoader = (() => {
-    // Add more entries here as you place new images in images/coloring-pages/
-    // Supports both PNG and SVG formats. Cards auto-hide if file is missing.
+    // Synchronous fallback when manifest.json fetch fails (ADR-019).
+    // Retained for offline-first support on very first load.
     const PRELOADED_COLORING_PAGES = [
         { id: 'cat', title: 'Cat', src: 'images/coloring-pages/cat.svg' },
         { id: 'dog', title: 'Dog', src: 'images/coloring-pages/dog.svg' },
@@ -40,6 +45,22 @@ const ImageLoader = (() => {
         { id: 'unicorn', title: 'Unicorn', src: 'images/coloring-pages/unicorn.svg' },
         { id: 'car', title: 'Car', src: 'images/coloring-pages/car.svg' },
     ];
+
+    const DIFFICULTY_LABELS = {
+        simple: 'Easy',
+        medium: 'Medium',
+        detailed: 'Detailed'
+    };
+
+    const SEARCH_DEBOUNCE_MS = 300;
+
+    // Loaded manifest data (ADR-019). Null means fallback to PRELOADED.
+    let manifestData = null;
+    // Flattened template list derived from manifest (or fallback)
+    let allTemplates = [];
+    let currentSortMode = 'category'; // 'category', 'name', 'difficulty'
+    let currentSearchQuery = '';
+    let searchDebounceTimer = null;
 
     let galleryModal = null;
     let galleryGrid = null;
@@ -67,9 +88,10 @@ const ImageLoader = (() => {
     const REFERENCE_PANEL_MIN_WIDTH = 140;
     const REFERENCE_PANEL_MIN_HEIGHT = 120;
 
-    // Caches all DOM references up front and wires sub-components.
-    // The reference preview image gets an error listener so a broken
-    // image source is cleared instead of showing a broken icon.
+    // Caches all DOM references up front, loads the template manifest
+    // (ADR-019), and wires sub-components. Falls back to the hardcoded
+    // array if manifest fetch fails. The reference preview image gets
+    // an error listener so a broken image source is cleared.
     function initialize() {
         galleryModal = document.getElementById('image-gallery-modal');
         galleryGrid = document.getElementById('gallery-grid');
@@ -89,7 +111,26 @@ const ImageLoader = (() => {
             clearReferencePreviewImage();
         });
 
+        // Load manifest then build gallery (ADR-019).
+        // Show fallback grid immediately, then upgrade if manifest loads.
         buildGalleryThumbnails();
+        loadManifest().then((manifest) => {
+            if (manifest) {
+                manifestData = manifest;
+                allTemplates = flattenManifestTemplates(manifest);
+                renderTemplateGallery();
+            } else {
+                allTemplates = PRELOADED_COLORING_PAGES.map((p) => ({
+                    id: p.id,
+                    title: p.title,
+                    file: p.src,
+                    difficulty: 'simple',
+                    category: 'all'
+                }));
+            }
+        });
+
+        setupSearchAndSort();
         setupUploadHandler();
         setupReferenceUploadHandler();
         setupReferencePanelInteractions();
@@ -97,9 +138,189 @@ const ImageLoader = (() => {
         setupCloseHandler();
     }
 
+    // Fetches the JSON manifest from templates/manifest.json (ADR-019).
+    // Returns the parsed manifest object or null on failure.
+    function loadManifest() {
+        return fetch('templates/manifest.json')
+            .then((response) => {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                return response.json();
+            })
+            .catch((error) => {
+                console.warn('Manifest fetch failed, using built-in templates', error);
+                return null;
+            });
+    }
+
+    // Converts the nested manifest structure into a flat array
+    // of templates, each annotated with its category ID.
+    function flattenManifestTemplates(manifest) {
+        const templates = [];
+        manifest.categories.forEach((category) => {
+            category.templates.forEach((template) => {
+                templates.push({
+                    id: template.id,
+                    title: template.title,
+                    file: template.file,
+                    difficulty: template.difficulty || 'simple',
+                    category: category.id,
+                    categoryName: category.name,
+                    categoryEmoji: category.emoji,
+                    suggestedPalette: template.suggestedPalette || null
+                });
+            });
+        });
+        return templates;
+    }
+
+    // Renders the template gallery from manifest data (ADR-019).
+    // Groups templates by category with emoji headers and difficulty
+    // badges. Applies current search filter and sort mode.
+    function renderTemplateGallery() {
+        galleryGrid.innerHTML = '';
+
+        const filteredTemplates = getFilteredAndSortedTemplates();
+
+        if (filteredTemplates.length === 0) {
+            const emptyMsg = document.createElement('p');
+            emptyMsg.className = 'gallery-empty-search';
+            emptyMsg.textContent = 'No templates match your search.';
+            galleryGrid.appendChild(emptyMsg);
+            return;
+        }
+
+        if (currentSortMode === 'category' && manifestData) {
+            renderGroupedByCategory(filteredTemplates);
+        } else {
+            renderFlatGrid(filteredTemplates);
+        }
+    }
+
+    // Renders templates grouped under category headers with emoji
+    function renderGroupedByCategory(templates) {
+        const categoryOrder = manifestData.categories.map((c) => c.id);
+        const grouped = {};
+
+        templates.forEach((t) => {
+            if (!grouped[t.category]) grouped[t.category] = [];
+            grouped[t.category].push(t);
+        });
+
+        categoryOrder.forEach((catId) => {
+            if (!grouped[catId] || grouped[catId].length === 0) return;
+
+            const category = manifestData.categories.find((c) => c.id === catId);
+            const header = document.createElement('div');
+            header.className = 'gallery-category-header';
+            header.textContent = category.emoji + ' ' + category.name;
+            galleryGrid.appendChild(header);
+
+            const grid = document.createElement('div');
+            grid.className = 'gallery-category-grid';
+            grouped[catId].forEach((template) => {
+                grid.appendChild(buildTemplateCard(template));
+            });
+            galleryGrid.appendChild(grid);
+        });
+    }
+
+    // Renders a flat grid of template cards (no category grouping)
+    function renderFlatGrid(templates) {
+        templates.forEach((template) => {
+            galleryGrid.appendChild(buildTemplateCard(template));
+        });
+    }
+
+    // Builds a single template card with thumbnail, title,
+    // and difficulty badge. Tapping loads the coloring page.
+    function buildTemplateCard(template) {
+        const card = document.createElement('div');
+        card.className = 'gallery-item';
+        card.dataset.templateId = template.id;
+
+        const img = document.createElement('img');
+        img.src = template.file;
+        img.alt = template.title;
+        img.loading = 'lazy';
+        img.onerror = () => { card.classList.add('hidden'); };
+        card.appendChild(img);
+
+        // Title label below thumbnail
+        const title = document.createElement('span');
+        title.className = 'gallery-item-title';
+        title.textContent = template.title;
+        card.appendChild(title);
+
+        // Difficulty badge (ADR-019)
+        if (template.difficulty && DIFFICULTY_LABELS[template.difficulty]) {
+            const badge = document.createElement('span');
+            badge.className = 'difficulty-badge difficulty-' + template.difficulty;
+            badge.textContent = DIFFICULTY_LABELS[template.difficulty];
+            card.appendChild(badge);
+        }
+
+        card.addEventListener('pointerdown', () => {
+            loadColoringPage(template.file);
+        });
+
+        return card;
+    }
+
+    // Returns templates filtered by search query and sorted
+    // by the current sort mode.
+    function getFilteredAndSortedTemplates() {
+        let templates = allTemplates.slice();
+
+        // Filter by search query
+        if (currentSearchQuery) {
+            const query = currentSearchQuery.toLowerCase();
+            templates = templates.filter((t) =>
+                t.title.toLowerCase().includes(query)
+            );
+        }
+
+        // Sort
+        if (currentSortMode === 'name') {
+            templates.sort((a, b) => a.title.localeCompare(b.title));
+        } else if (currentSortMode === 'difficulty') {
+            const order = { simple: 0, medium: 1, detailed: 2 };
+            templates.sort((a, b) =>
+                (order[a.difficulty] || 0) - (order[b.difficulty] || 0)
+            );
+        }
+        // 'category' mode preserves manifest order (no extra sort)
+
+        return templates;
+    }
+
+    // Wires the search input (debounced 300ms) and sort dropdown
+    // in the templates panel. Both trigger a full re-render of
+    // the gallery grid.
+    function setupSearchAndSort() {
+        const searchInput = document.getElementById('gallery-search');
+        const sortSelect = document.getElementById('gallery-sort');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function handleSearchInput() {
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                    currentSearchQuery = searchInput.value.trim();
+                    renderTemplateGallery();
+                }, SEARCH_DEBOUNCE_MS);
+            });
+        }
+
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function handleSortChange() {
+                currentSortMode = sortSelect.value;
+                renderTemplateGallery();
+            });
+        }
+    }
+
     // Creates thumbnail cards for each pre-loaded coloring page
-    // and adds them to the gallery grid. Each card loads the
-    // full image onto the canvas when tapped.
+    // and adds them to the gallery grid. Used as the initial/fallback
+    // rendering before manifest loads (ADR-019).
     function buildGalleryThumbnails() {
         galleryGrid.innerHTML = '';
 

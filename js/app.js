@@ -9,12 +9,14 @@
  *
  * Key functions:
  *   - initializeColoringBookApp: IIFE that calls initialize() on all modules in order
+ *   - detectPerformanceTier: Sets data-performance attribute for glassmorphism fallback
  *   - registerServiceWorker: Registers the service worker (logs warning on failure)
  *   - checkForResumableProject: Opens IndexedDB, checks for in-progress work
  *   - showResumeModal: Shows thumbnail of previous work with Keep Going / Start Fresh
  *
- * Dependencies: TouchGuard, FeedbackManager, CanvasManager, ColorPalette, BrushEngine,
- *   ImageLoader, Toolbar, StorageManager, ProgressManager (all modules)
+ * Dependencies: TouchGuard, FeedbackManager, CanvasManager, ColorPalette, FloodFill,
+ *   BrushEngine, ImageLoader, Toolbar, CelebrationManager, RadialMenu, StorageManager,
+ *   ProgressManager (all modules)
  *
  * Notes: Module initialization order matters — CanvasManager must come before any
  *   module that reads canvas elements, and Toolbar must come last because it wires
@@ -23,6 +25,10 @@
  */
 
 (function initializeColoringBookApp() {
+    // Detect performance tier before modules init so CSS
+    // fallbacks for glassmorphism are applied early
+    detectPerformanceTier();
+
     // Initialize modules in dependency order:
     // 1. Touch guards first (prevent browser gesture interference)
     // 2. Feedback manager (spinner + toast ready for use)
@@ -30,26 +36,45 @@
     // 4. Viewport manager (needs canvas container for zoom/pan, ADR-009)
     // 5. Undo manager (no init needed — ready immediately)
     // 6. Color palette (standalone UI)
-    // 7. Brush engine (needs canvas + color palette + toolbar)
-    // 8. Image loader (needs canvas + undo manager)
-    // 9. Toolbar (wires up all other modules)
-    // 10. Mode manager wires kid/studio delegation (needs Toolbar initialized)
-    // 11. Progress manager (registers visibilitychange listener)
+    // 7. Flood fill worker (ADR-021, needs canvas initialized)
+    // 8. Brush engine (needs canvas + color palette + toolbar)
+    // 9. Image loader (needs canvas + undo manager)
+    // 10. Toolbar (wires up all other modules)
+    // 11. Mode manager wires kid/studio delegation (needs Toolbar initialized)
+    // 12. Celebration manager (needs EventBus + ModeManager, ADR-022)
+    // 13. Radial menu (needs Toolbar, ADR-023)
+    // 14. Progress manager (registers visibilitychange listener)
     TouchGuard.initialize();
     FeedbackManager.initialize();
     CanvasManager.initialize();
     ViewportManager.initialize();
     ColorPalette.initialize();
     ColorPicker.initialize();
+    FloodFill.initialize();
     BrushEngine.initialize();
     ImageLoader.initialize();
     Toolbar.initialize();
     ModeManager.initialize();
+    CelebrationManager.initialize();
+    RadialMenu.initialize();
     ProgressManager.initialize();
 
     registerServiceWorker();
     checkForResumableProject();
 })();
+
+// Sets data-performance="low" on the document element when the device
+// has limited memory or CPU cores. CSS uses this to replace expensive
+// backdrop-filter blur with opaque panels. Also reduces confetti count
+// for celebration animations (ADR-022).
+function detectPerformanceTier() {
+    const hasLowMemory = navigator.deviceMemory && navigator.deviceMemory < 4;
+    const hasLowCores = navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4;
+
+    if (hasLowMemory || hasLowCores) {
+        document.documentElement.setAttribute('data-performance', 'low');
+    }
+}
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {

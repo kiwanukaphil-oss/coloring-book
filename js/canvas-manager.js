@@ -16,7 +16,9 @@
  *   - renderCompositeForSave: Composites coloring + outline layers for PNG export
  *   - handleWindowResize: Snapshots and restores all layers when the viewport changes
  *   - computeOutlineMask: Builds binary Uint8Array mask for edge-aware brush (ADR-008)
+ *   - computeOutlineMaskAsync: Worker-accelerated mask computation (ADR-021)
  *   - getOutlineMask: Returns precomputed mask for O(1) outline pixel checks
+ *   - getPixelColorAt: Reads a single pixel from the coloring canvas, returns hex (ADR-018)
  *
  * Dependencies: None (foundational module — all other modules depend on this)
  *
@@ -48,6 +50,10 @@ const CanvasManager = (() => {
     // Precomputed on template load for O(1) per-pixel lookups
     // by the brush engine (ADR-008).
     let outlineMask = null;
+
+    // Mask worker state (ADR-021)
+    let maskWorker = null;
+    let isMaskWorkerReady = false;
 
     // Wraps canvas operations that need to work at native pixel
     // resolution by saving the context, resetting its transform,
@@ -95,9 +101,63 @@ const CanvasManager = (() => {
 
         resizeCanvasesToFitContainer();
         fillColoringCanvasWhite();
+        initializeMaskWorker();
 
         window.addEventListener('resize', handleWindowResize);
     }
+
+    // Creates the mask worker for off-main-thread outline mask
+    // computation. Skipped in ?classic=1 mode for test
+    // compatibility. Falls back to sync permanently if Worker
+    // creation fails. (ADR-021)
+    function initializeMaskWorker() {
+        const isClassicMode = new URLSearchParams(window.location.search).has('classic');
+        if (isClassicMode) return;
+
+        try {
+            maskWorker = new Worker('./workers/mask-worker.js');
+            maskWorker.onmessage = handleMaskWorkerMessage;
+            maskWorker.onerror = handleMaskWorkerError;
+        } catch (error) {
+            console.warn('Mask worker not available, using sync fallback:', error);
+            maskWorker = null;
+        }
+    }
+
+    // Handles messages from the mask worker (ADR-021)
+    function handleMaskWorkerMessage(event) {
+        if (event.data.type === 'ready') {
+            isMaskWorkerReady = true;
+            return;
+        }
+
+        // Store mask from worker result
+        const maskBuffer = event.data.mask;
+        outlineMask = new Uint8Array(maskBuffer);
+
+        // Resolve any pending async mask computation
+        if (pendingMaskResolve) {
+            pendingMaskResolve();
+            pendingMaskResolve = null;
+        }
+    }
+
+    // Disables the mask worker permanently on error (ADR-021, ADR-001)
+    function handleMaskWorkerError(error) {
+        console.warn('Mask worker error, falling back to sync:', error);
+        maskWorker = null;
+        isMaskWorkerReady = false;
+
+        // If there's a pending async request, fall back to sync
+        if (pendingMaskResolve) {
+            computeOutlineMask();
+            pendingMaskResolve();
+            pendingMaskResolve = null;
+        }
+    }
+
+    // Resolve callback for async mask computation (ADR-021)
+    let pendingMaskResolve = null;
 
     // Calculates the optimal canvas resolution based on the
     // container size and device pixel ratio, capped at
@@ -166,9 +226,12 @@ const CanvasManager = (() => {
                 );
 
                 makeWhitePixelsTransparent();
-                computeOutlineMask();
 
-                resolve(fitDimensions);
+                // Use async mask computation when worker is available,
+                // sync fallback otherwise (ADR-021)
+                computeOutlineMaskAsync().then(() => {
+                    resolve(fitDimensions);
+                });
             };
 
             image.onerror = () => {
@@ -294,6 +357,36 @@ const CanvasManager = (() => {
         }
     }
 
+    // Worker-accelerated mask computation. Returns a Promise that
+    // resolves when the mask is ready. Falls back to synchronous
+    // computation when the mask worker is unavailable. Used by
+    // loadOutlineImage for async template loading. (ADR-021)
+    function computeOutlineMaskAsync() {
+        if (!maskWorker || !isMaskWorkerReady) {
+            computeOutlineMask();
+            return Promise.resolve();
+        }
+
+        const width = outlineCanvas.width;
+        const height = outlineCanvas.height;
+        const imageData = withNativeTransform(outlineCtx, (ctx) => {
+            return ctx.getImageData(0, 0, width, height);
+        });
+
+        return new Promise((resolve) => {
+            pendingMaskResolve = resolve;
+
+            // Transfer outline pixel buffer to worker (zero-copy)
+            maskWorker.postMessage({
+                outlinePixels: imageData.data.buffer,
+                width: width,
+                height: height,
+                luminanceThreshold: 80,
+                alphaThreshold: 128
+            }, [imageData.data.buffer]);
+        });
+    }
+
     function clearAllCanvases() {
         withNativeTransform(coloringCtx, (ctx) => {
             ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
@@ -376,6 +469,31 @@ const CanvasManager = (() => {
         });
     }
 
+    // Reads the color of a single pixel on the coloring canvas at
+    // native canvas coordinates. Returns a hex string (#RRGGBB) or
+    // null if the pixel is fully transparent. Used by the eyedropper
+    // tool (ADR-018). Coordinates must already be in canvas pixel
+    // space (via getCanvasPixelCoords per ADR-002).
+    function getPixelColorAt(canvasX, canvasY) {
+        const x = Math.floor(canvasX);
+        const y = Math.floor(canvasY);
+
+        if (x < 0 || x >= coloringCanvas.width || y < 0 || y >= coloringCanvas.height) {
+            return null;
+        }
+
+        const pixel = withNativeTransform(coloringCtx, (ctx) => {
+            return ctx.getImageData(x, y, 1, 1).data;
+        });
+
+        if (pixel[3] === 0) return null;
+
+        const hex = '#' +
+            ((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2])
+                .toString(16).slice(1).toUpperCase();
+        return hex;
+    }
+
     // Returns the pixel-ratio-aware scale factor used by the canvas,
     // needed by other modules to convert CSS coords to canvas coords
     function getScaleFactor() {
@@ -386,6 +504,7 @@ const CanvasManager = (() => {
         initialize,
         withNativeTransform,
         getCanvasPixelCoords,
+        getPixelColorAt,
         loadOutlineImage,
         loadReferenceImage,
         clearColoringCanvas,

@@ -50,6 +50,14 @@
     --color-overlay-strong: rgba(0, 0, 0, 0.5);
     --color-overlay-light: rgba(255, 255, 255, 0.6);
 
+    /* Colors — Interactive hover/active overlays */
+    --color-hover-overlay: rgba(0, 0, 0, 0.06);
+    --color-active-overlay: rgba(0, 0, 0, 0.12);
+
+    /* Colors — Glow shadows */
+    --glow-primary: rgba(255, 111, 0, 0.3);
+    --glow-primary-strong: rgba(255, 111, 0, 0.35);
+
     /* Colors — Glass (for reimagined UI) */
     --glass-bg: rgba(255, 255, 255, 0.82);
     --glass-blur: 16px;
@@ -75,7 +83,7 @@
     /* Shadows */
     --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.3);
     --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.28);
-    --shadow-swatch-selected: 0 0 0 3px #333, 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-swatch-selected: 0 0 0 3px var(--color-text-primary), 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-tool-active: 0 0 0 3px #FFD54F;
     --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.25);
     --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.10);
@@ -89,10 +97,11 @@
     --t-slow: 0.4s;
 }
 
-/* Dark mode token overrides (placeholder — full values in Phase 2) */
+/* Dark mode token overrides — complete values (Phase 2, ADR-010) */
 [data-theme="dark"] {
+    /* Surfaces */
     --color-surface: #1a1a2e;
-    --color-canvas: #ffffff; /* Canvas always stays white */
+    --color-canvas: #ffffff; /* Canvas paper always stays white */
     --color-surface-subtle: #16213e;
     --color-surface-muted: #1a1a2e;
     --color-toolbar: #0f3460;
@@ -100,15 +109,48 @@
     --color-toolbar-button: #16213e;
     --color-palette-bg: #1a1a2e;
     --color-modal-bg: #16213e;
+
+    /* Text */
     --color-text-primary: #e0e0e0;
     --color-text-secondary: #b0b0b0;
     --color-text-muted: #808080;
+
+    /* Borders */
     --color-border: #2a2a4a;
     --color-border-light: #3a3a5a;
     --color-border-lighter: #2a2a4a;
     --color-border-subtle: #3a3a5a;
+
+    /* Overlays — dark mode inverts: light overlay on dark surfaces */
+    --color-overlay: rgba(0, 0, 0, 0.7);
+    --color-overlay-strong: rgba(0, 0, 0, 0.6);
     --color-overlay-light: rgba(0, 0, 0, 0.4);
+    --color-hover-overlay: rgba(255, 255, 255, 0.08);
+    --color-active-overlay: rgba(255, 255, 255, 0.15);
+
+    /* Semantic colors — lighter variants for dark backgrounds */
+    --color-success: #66BB6A;
+    --color-success-dark: #43A047;
+    --color-danger: #EF5350;
+    --color-neutral: #90A4AE;
+    --color-neutral-dark: #78909C;
+    --color-reference: #42A5F5;
+    --color-reference-dark: #1E88E5;
+    --color-reference-light: #BBDEFB;
+
+    /* Glass */
     --glass-bg: rgba(22, 33, 62, 0.85);
+
+    /* Shadows — deeper for dark surfaces */
+    --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.5);
+    --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.45);
+    --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.25);
+    --shadow-swatch-selected: 0 0 0 3px var(--color-text-primary), 0 2px 8px rgba(0, 0, 0, 0.5);
+
+    /* Glow — slightly brighter on dark */
+    --glow-primary: rgba(255, 111, 0, 0.4);
+    --glow-primary-strong: rgba(255, 111, 0, 0.45);
 }
 
 /* --- Reset & Base --- */
@@ -214,6 +256,11 @@ html, body {
 
 #interaction-canvas.brush-active {
     cursor: none;
+}
+
+/* Eyedropper tool shows crosshair cursor (ADR-018) */
+#interaction-canvas.eyedropper-active {
+    cursor: crosshair;
 }
 
 .reference-panel {
@@ -420,6 +467,42 @@ html, body {
     text-align: center;
 }
 
+/* --- Brush Preset Control (ADR-020) --- */
+.brush-preset-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+}
+
+.brush-preset-control.hidden {
+    display: none;
+}
+
+.preset-button {
+    background: var(--color-toolbar-button);
+    color: var(--color-text-on-dark);
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-primary);
+    cursor: pointer;
+    transition: border-color var(--t-fast) var(--ease-standard),
+                background var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.preset-button:hover {
+    background: var(--color-neutral-dark);
+}
+
+.preset-button.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+}
+
 /* --- Modal Overlay --- */
 .modal {
     position: fixed;
@@ -619,6 +702,118 @@ html, body {
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+.gallery-item-title {
+    display: block;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    padding: 2px 4px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* --- Gallery Controls: Search & Sort (ADR-019) --- */
+.gallery-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.gallery-search {
+    flex: 1;
+    padding: 8px 12px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+    outline: none;
+    transition: border-color var(--t-fast) var(--ease-standard);
+}
+
+.gallery-search:focus {
+    border-color: var(--color-primary);
+}
+
+.gallery-sort {
+    padding: 8px 12px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    background: var(--color-surface-subtle);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    outline: none;
+}
+
+.gallery-sort:focus {
+    border-color: var(--color-primary);
+}
+
+/* --- Category Headers (ADR-019) --- */
+.gallery-category-header {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    padding: 8px 0 4px;
+    border-bottom: 2px solid var(--color-border-light);
+    margin-bottom: 4px;
+}
+
+.gallery-category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+/* --- Difficulty Badges (ADR-019) --- */
+.difficulty-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 6px;
+    border-radius: var(--radius-pill);
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+
+.gallery-item {
+    position: relative;
+}
+
+.difficulty-simple {
+    background: var(--color-success);
+    color: var(--color-text-on-dark);
+}
+
+.difficulty-medium {
+    background: var(--color-primary);
+    color: var(--color-text-on-dark);
+}
+
+.difficulty-detailed {
+    background: var(--color-danger);
+    color: var(--color-text-on-dark);
+}
+
+/* Empty search result message */
+.gallery-empty-search {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 16px;
+    padding: 32px 0;
 }
 
 .upload-button {
@@ -891,7 +1086,7 @@ html, body {
 .mode-option.active {
     background: var(--color-primary);
     color: var(--color-text-on-dark);
-    box-shadow: 0 2px 8px rgba(255, 111, 0, 0.3);
+    box-shadow: 0 2px 8px var(--glow-primary);
 }
 
 /* --- Theme Toggle --- */
@@ -962,7 +1157,7 @@ html, body {
 
 .kids-tool-bubble.active {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(255, 111, 0, 0.35), var(--shadow-float);
+    box-shadow: 0 0 0 4px var(--glow-primary-strong), var(--shadow-float);
     transform: scale(1.08);
 }
 
@@ -1055,7 +1250,51 @@ html, body {
 
 .kids-size-bubble.active {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(255, 111, 0, 0.3);
+    box-shadow: 0 0 0 3px var(--glow-primary);
+}
+
+/* --- Kids Brush Preset Bubbles (ADR-020) --- */
+.kids-preset-bubbles {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+.kids-preset-bubbles.hidden {
+    display: none;
+}
+
+.kids-preset-bubble {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--color-border-light);
+    border-radius: var(--radius-round);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform var(--t-fast) var(--ease-spring),
+                border-color var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.kids-preset-bubble:active {
+    transform: scale(0.9);
+}
+
+.kids-preset-bubble.active {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--glow-primary);
 }
 
 /* --- Kids Top Left Actions --- */
@@ -1106,6 +1345,53 @@ html, body {
 }
 
 /* --- Studio Dock (bottom center) --- */
+/* --- Studio Brush Preset Bar (ADR-020) --- */
+.studio-preset-bar {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-float);
+}
+
+.studio-preset-bar.hidden {
+    display: none;
+}
+
+.studio-preset-btn {
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-primary);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: var(--font-primary);
+    cursor: pointer;
+    transition: background-color var(--t-fast) var(--ease-standard),
+                border-color var(--t-fast) var(--ease-standard);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.studio-preset-btn:hover {
+    background: var(--color-hover-overlay);
+}
+
+.studio-preset-btn.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: var(--color-text-on-dark);
+}
+
 .dock {
     position: fixed;
     bottom: 20px;
@@ -1138,7 +1424,7 @@ html, body {
 }
 
 .dock-tool:hover {
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--color-hover-overlay);
 }
 
 .dock-tool:active {
@@ -1197,11 +1483,11 @@ html, body {
 }
 
 .studio-action-btn:hover {
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--color-hover-overlay);
 }
 
 .studio-action-btn:active {
-    background: rgba(0, 0, 0, 0.12);
+    background: var(--color-active-overlay);
 }
 
 .studio-action-icon {
@@ -1244,11 +1530,11 @@ html, body {
 }
 
 .zoom-pill-btn:hover {
-    background: rgba(0, 0, 0, 0.06);
+    background: var(--color-hover-overlay);
 }
 
 .zoom-pill-btn:active {
-    background: rgba(0, 0, 0, 0.12);
+    background: var(--color-active-overlay);
 }
 
 .zoom-pill-value {
@@ -1389,4 +1675,132 @@ html, body {
 
 :root:not([data-mode]) .kids-lightness {
     display: none !important;
+}
+
+/* --- Celebration Animations (ADR-022) --- */
+.celebration-container {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.confetti-particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    will-change: transform, opacity;
+    animation: confetti-burst 2s var(--ease-standard) forwards;
+    animation-delay: var(--stagger, 0ms);
+}
+
+@keyframes confetti-burst {
+    0% {
+        transform: translate(0, 0) rotate(0deg) scale(1);
+        opacity: 1;
+    }
+    60% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--dx, 0), var(--dy, 200px)) rotate(var(--rot, 360deg)) scale(0.3);
+        opacity: 0;
+    }
+}
+
+/* Reduced-motion: border pulse instead of confetti (ADR-022, ADR-013) */
+.celebration-pulse {
+    box-shadow: inset 0 0 0 4px var(--color-primary);
+    transition: box-shadow 0.3s ease-out;
+}
+
+/* --- Studio Radial Menu (ADR-023) --- */
+.radial-menu {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 45;
+    width: 0;
+    height: 0;
+}
+
+.radial-item {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    color: var(--color-text-primary);
+    font-family: var(--font-primary);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    transform: translate(calc(-50% + var(--offset-x, 0px)), calc(-50% + var(--offset-y, 0px))) scale(0);
+    opacity: 0;
+    transition: transform var(--t-fast) var(--ease-spring),
+                opacity var(--t-fast) var(--ease-standard),
+                background-color var(--t-quick) var(--ease-standard);
+    transition-delay: 0ms;
+}
+
+.radial-item:hover {
+    background: var(--color-primary);
+    color: var(--color-text-on-dark);
+}
+
+.radial-item:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.radial-open .radial-item {
+    transform: translate(calc(-50% + var(--offset-x, 0px)), calc(-50% + var(--offset-y, 0px))) scale(1);
+    opacity: 1;
+    transition-delay: var(--stagger, 0ms);
+}
+
+/* Dock trigger button styling */
+.dock-trigger {
+    position: relative;
+}
+
+.dock-trigger svg {
+    transition: transform var(--t-fast) var(--ease-spring);
+}
+
+.radial-open ~ .dock .dock-trigger svg,
+.dock-trigger[aria-expanded="true"] svg {
+    transform: rotate(45deg);
+}
+
+/* --- Glassmorphism Performance Fallback --- */
+/* On low-performance devices, replace expensive backdrop-filter
+   blur with opaque background panels. Confetti count is also
+   reduced to 15 in CelebrationManager (ADR-022). */
+[data-performance="low"] .dock,
+[data-performance="low"] .kids-tool-bubble,
+[data-performance="low"] .kids-action-btn,
+[data-performance="low"] .kids-size-bubble,
+[data-performance="low"] .kids-preset-bubble,
+[data-performance="low"] .kids-undo-bar,
+[data-performance="low"] .studio-undo-bar,
+[data-performance="low"] .zoom-pill,
+[data-performance="low"] .mode-switch,
+[data-performance="low"] .theme-toggle,
+[data-performance="low"] .studio-preset-bar,
+[data-performance="low"] .radial-item {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
 }

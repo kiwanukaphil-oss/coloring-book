@@ -1,0 +1,82 @@
+{
+    "version": 1,
+    "categories": [
+        {
+            "id": "animals",
+            "name": "Animals",
+            "emoji": "\ud83e\udd81",
+            "templates": [
+                {
+                    "id": "cat",
+                    "title": "Cat",
+                    "file": "images/coloring-pages/cat.svg",
+                    "difficulty": "simple",
+                    "suggestedPalette": ["#FF6B6B", "#FFD93D", "#6BCB77"]
+                },
+                {
+                    "id": "dog",
+                    "title": "Dog",
+                    "file": "images/coloring-pages/dog.svg",
+                    "difficulty": "simple",
+                    "suggestedPalette": ["#A0522D", "#FFD700", "#FF8C00"]
+                },
+                {
+                    "id": "butterfly",
+                    "title": "Butterfly",
+                    "file": "images/coloring-pages/butterfly.svg",
+                    "difficulty": "medium",
+                    "suggestedPalette": ["#FF69B4", "#8A2BE2", "#FFD700"]
+                },
+                {
+                    "id": "fish",
+                    "title": "Fish",
+                    "file": "images/coloring-pages/fish.svg",
+                    "difficulty": "simple",
+                    "suggestedPalette": ["#00BFFF", "#00CED1", "#FFD700"]
+                },
+                {
+                    "id": "unicorn",
+                    "title": "Unicorn",
+                    "file": "images/coloring-pages/unicorn.svg",
+                    "difficulty": "detailed",
+                    "suggestedPalette": ["#FF69B4", "#8A2BE2", "#FFD700", "#00BFFF"]
+                }
+            ]
+        },
+        {
+            "id": "nature",
+            "name": "Nature",
+            "emoji": "\ud83c\udf38",
+            "templates": [
+                {
+                    "id": "flower",
+                    "title": "Flower",
+                    "file": "images/coloring-pages/flower.svg",
+                    "difficulty": "simple",
+                    "suggestedPalette": ["#FF0000", "#FF69B4", "#00CC00"]
+                }
+            ]
+        },
+        {
+            "id": "vehicles",
+            "name": "Vehicles",
+            "emoji": "\ud83d\ude97",
+            "templates": [
+                {
+                    "id": "rocket",
+                    "title": "Rocket",
+                    "file": "images/coloring-pages/rocket.svg",
+                    "difficulty": "medium",
+                    "suggestedPalette": ["#FF0000", "#0000FF", "#FFD700"]
+                },
+                {
+                    "id": "car",
+                    "title": "Car",
+                    "file": "images/coloring-pages/car.svg",
+                    "difficulty": "medium",
+                    "suggestedPalette": ["#FF0000", "#0000FF", "#000000"]
+                }
+            ]
+        }
+    ]
+}

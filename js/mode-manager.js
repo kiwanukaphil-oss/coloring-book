@@ -92,6 +92,7 @@ const ModeManager = (() => {
         currentTheme = theme;
         applyTheme(theme);
         localStorage.setItem(STORAGE_KEY_THEME, theme);
+        updateThemeToggleIcon(theme);
     }
 
     // Wires the mode switch toggle buttons (Kids/Studio radio group)
@@ -143,6 +144,19 @@ const ModeManager = (() => {
             const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             switchTheme(newTheme);
         });
+
+        updateThemeToggleIcon(currentTheme);
+    }
+
+    // Swaps the theme toggle icon between sun and moon
+    function updateThemeToggleIcon(theme) {
+        const themeToggle = document.getElementById('theme-toggle');
+        if (!themeToggle) return;
+
+        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        themeToggle.setAttribute('aria-label',
+            theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
+        );
     }
 
     // Kids mode tool bubbles delegate to existing Toolbar API
@@ -203,10 +217,28 @@ const ModeManager = (() => {
             });
         });
 
+        // Wire kids preset bubbles (ADR-020)
+        const kidsPresets = document.getElementById('kids-preset-bubbles');
+        if (kidsPresets) {
+            const presetButtons = kidsPresets.querySelectorAll('[data-preset]');
+            presetButtons.forEach((button) => {
+                button.addEventListener('pointerdown', function handleKidsPresetSelect() {
+                    const preset = button.getAttribute('data-preset');
+                    Toolbar.setActivePreset(preset);
+                });
+            });
+        }
+
         // Sync tool active state when tool changes via other means
         // (keyboard shortcuts, classic toolbar)
         EventBus.on('tool:changed', (data) => {
             updateKidsToolActiveState(data.tool);
+            updateKidsPresetVisibility(data.tool);
+        });
+
+        // Sync preset active state across UIs (ADR-020)
+        EventBus.on('preset:changed', (data) => {
+            updateKidsPresetActiveState(data.preset);
         });
     }
 
@@ -220,6 +252,25 @@ const ModeManager = (() => {
             const isActive = button.getAttribute('data-tool') === activeTool;
             button.classList.toggle('active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    // Shows kids preset bubbles only when the brush tool is active (ADR-020)
+    function updateKidsPresetVisibility(activeTool) {
+        const kidsPresets = document.getElementById('kids-preset-bubbles');
+        if (!kidsPresets) return;
+        kidsPresets.classList.toggle('hidden', activeTool !== 'brush');
+    }
+
+    // Updates which kids preset bubble shows the active state
+    function updateKidsPresetActiveState(preset) {
+        const kidsPresets = document.getElementById('kids-preset-bubbles');
+        if (!kidsPresets) return;
+
+        kidsPresets.querySelectorAll('[data-preset]').forEach((btn) => {
+            const isActive = btn.getAttribute('data-preset') === preset;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 
@@ -300,9 +351,46 @@ const ModeManager = (() => {
             });
         }
 
+        // Wire studio preset bar buttons (ADR-020)
+        const studioPresetBar = document.getElementById('studio-preset-bar');
+        if (studioPresetBar) {
+            const presetButtons = studioPresetBar.querySelectorAll('[data-preset]');
+            presetButtons.forEach((button) => {
+                button.addEventListener('pointerdown', function handleStudioPresetSelect() {
+                    const preset = button.getAttribute('data-preset');
+                    Toolbar.setActivePreset(preset);
+                });
+            });
+        }
+
         // Sync tool active state on the dock when tool changes
         EventBus.on('tool:changed', (data) => {
             updateDockToolActiveState(data.tool);
+            updateStudioPresetVisibility(data.tool);
+        });
+
+        // Sync preset active state across UIs (ADR-020)
+        EventBus.on('preset:changed', (data) => {
+            updateStudioPresetActiveState(data.preset);
+        });
+    }
+
+    // Shows studio preset bar only when the brush tool is active (ADR-020)
+    function updateStudioPresetVisibility(activeTool) {
+        const studioPresetBar = document.getElementById('studio-preset-bar');
+        if (!studioPresetBar) return;
+        studioPresetBar.classList.toggle('hidden', activeTool !== 'brush');
+    }
+
+    // Updates which studio preset button shows the active state
+    function updateStudioPresetActiveState(preset) {
+        const studioPresetBar = document.getElementById('studio-preset-bar');
+        if (!studioPresetBar) return;
+
+        studioPresetBar.querySelectorAll('[data-preset]').forEach((btn) => {
+            const isActive = btn.getAttribute('data-preset') === preset;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 

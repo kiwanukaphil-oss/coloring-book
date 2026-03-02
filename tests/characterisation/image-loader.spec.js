@@ -95,6 +95,10 @@ test.describe('ImageLoader', () => {
   });
 
   test('hideGallery adds hidden class to gallery modal', async ({ page }) => {
+    // Wait for async checkForResumableProject to finish (shows gallery)
+    await page.waitForFunction(() =>
+      !document.getElementById('image-gallery-modal').classList.contains('hidden')
+    );
     await page.evaluate(() => ImageLoader.hideGallery());
 
     const hidden = await page.evaluate(() =>

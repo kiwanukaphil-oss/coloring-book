@@ -1,18 +1,22 @@
 /**
  * Toolbar
  *
- * Responsible for: Managing tool selection (fill / brush / eraser), brush size
- *   slider, clear/undo/save/gallery button actions, and the clear confirmation dialog.
+ * Responsible for: Managing tool selection (fill / brush / eraser / eyedropper),
+ *   brush size slider, brush preset selection (ADR-020), clear/undo/save/gallery
+ *   button actions, and the clear confirmation dialog.
  * NOT responsible for: Performing drawing (BrushEngine), executing fills (FloodFill),
  *   or managing canvas layers (CanvasManager).
  *
  * Key functions:
- *   - setupToolSwitching: Wires fill/brush/eraser toggle buttons
- *   - setActiveTool: Sets the active tool and updates UI (fill, brush, or eraser)
+ *   - setupToolSwitching: Wires fill/brush/eraser/eyedropper toggle buttons
+ *   - setActiveTool: Sets the active tool and updates UI (fill, brush, eraser, or eyedropper)
+ *   - setActivePreset: Sets brush preset via BrushEngine, updates UI, emits event (ADR-020)
  *   - setupClearButton: Shows confirmation dialog before clearing the canvas
  *   - setupSaveButton: Composites layers and triggers PNG download
  *   - setupFillTapHandler: Distinguishes taps from drags for flood fill
- *   - getActiveTool: Returns 'fill', 'brush', or 'eraser'
+ *   - setupEyedropperHandler: Handles eyedropper tap with auto-switch-back (ADR-018)
+ *   - getActiveTool: Returns 'fill', 'brush', 'eraser', or 'eyedropper'
+ *   - getActivePreset: Returns the active brush preset name (ADR-020)
  *
  * Dependencies: CanvasManager, FloodFill, ColorPalette, BrushEngine, UndoManager,
  *   ImageLoader
@@ -24,22 +28,28 @@
  */
 
 const Toolbar = (() => {
-    let activeTool = 'fill'; // 'fill', 'brush', or 'eraser'
+    let activeTool = 'fill'; // 'fill', 'brush', 'eraser', or 'eyedropper'
+
+    // Stores the tool that was active before switching to eyedropper,
+    // so it can be restored after sampling (ADR-018: transient tool pattern)
+    let previousToolBeforeEyedropper = null;
 
     function initialize() {
         setupToolSwitching();
         setupBrushSizeSlider();
+        setupPresetSwitching();
         setupUndoButton();
         setupRedoButton();
         setupClearButton();
         setupSaveButton();
         setupGalleryButton();
         setupFillTapHandler();
+        setupEyedropperHandler();
         setupKeyboardShortcuts();
     }
 
-    // Wires up the fill, brush, and eraser buttons to toggle
-    // the active tool via setActiveTool.
+    // Wires up the fill, brush, eraser, and eyedropper buttons
+    // to toggle the active tool via setActiveTool.
     function setupToolSwitching() {
         document.getElementById('tool-fill').addEventListener('pointerdown', () => {
             setActiveTool('fill');
@@ -52,41 +62,113 @@ const Toolbar = (() => {
         document.getElementById('tool-eraser').addEventListener('pointerdown', () => {
             setActiveTool('eraser');
         });
+
+        const eyedropperBtn = document.getElementById('tool-eyedropper');
+        if (eyedropperBtn) {
+            eyedropperBtn.addEventListener('pointerdown', () => {
+                setActiveTool('eyedropper');
+            });
+        }
     }
 
     // Updates the active tool, button highlighting, and brush
     // size slider visibility. Called by button handlers and by
     // ProgressManager when restoring a saved project. The eraser
     // shares the brush size slider since it uses the same stroke width.
+    // When switching to eyedropper, stores the current tool for
+    // auto-switch-back after sampling (ADR-018).
     function setActiveTool(tool) {
+        // Track previous tool for eyedropper auto-switch-back (ADR-018)
+        if (tool === 'eyedropper' && activeTool !== 'eyedropper') {
+            previousToolBeforeEyedropper = activeTool;
+        }
+
         activeTool = tool;
         const fillButton = document.getElementById('tool-fill');
         const brushButton = document.getElementById('tool-brush');
         const eraserButton = document.getElementById('tool-eraser');
+        const eyedropperButton = document.getElementById('tool-eyedropper');
         const brushSizeControl = document.getElementById('brush-size-control');
 
         fillButton.classList.remove('active');
         brushButton.classList.remove('active');
         eraserButton.classList.remove('active');
+        if (eyedropperButton) eyedropperButton.classList.remove('active');
 
         // Toggle aria-pressed for screen readers (ADR-013)
         fillButton.setAttribute('aria-pressed', tool === 'fill' ? 'true' : 'false');
         brushButton.setAttribute('aria-pressed', tool === 'brush' ? 'true' : 'false');
         eraserButton.setAttribute('aria-pressed', tool === 'eraser' ? 'true' : 'false');
+        if (eyedropperButton) eyedropperButton.setAttribute('aria-pressed', tool === 'eyedropper' ? 'true' : 'false');
 
         if (tool === 'fill') {
             fillButton.classList.add('active');
             brushSizeControl.classList.add('hidden');
             CanvasManager.getInteractionCanvas().classList.remove('brush-active');
+            CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
         } else if (tool === 'brush') {
             brushButton.classList.add('active');
             brushSizeControl.classList.remove('hidden');
+            CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
         } else if (tool === 'eraser') {
             eraserButton.classList.add('active');
             brushSizeControl.classList.remove('hidden');
+            CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
+        } else if (tool === 'eyedropper') {
+            if (eyedropperButton) eyedropperButton.classList.add('active');
+            brushSizeControl.classList.add('hidden');
+            CanvasManager.getInteractionCanvas().classList.remove('brush-active');
+            CanvasManager.getInteractionCanvas().classList.add('eyedropper-active');
+        }
+
+        // Show preset selector only when brush tool is active (ADR-020)
+        const presetControl = document.getElementById('brush-preset-control');
+        if (presetControl) {
+            presetControl.classList.toggle('hidden', tool !== 'brush');
         }
 
         EventBus.emit('tool:changed', { tool });
+    }
+
+    // Wires the classic toolbar preset buttons to switch the
+    // active brush preset via setActivePreset (ADR-020).
+    function setupPresetSwitching() {
+        const presetControl = document.getElementById('brush-preset-control');
+        if (!presetControl) return;
+
+        const presetButtons = presetControl.querySelectorAll('.preset-button');
+        presetButtons.forEach((button) => {
+            button.addEventListener('pointerdown', function handlePresetSelect() {
+                const preset = button.getAttribute('data-preset');
+                setActivePreset(preset);
+            });
+        });
+    }
+
+    // Sets the active brush preset in BrushEngine, updates the
+    // classic toolbar preset buttons, and emits a preset:changed
+    // event for kids/studio UI sync (ADR-020).
+    function setActivePreset(name) {
+        BrushEngine.setActivePreset(name);
+        updatePresetActiveState(name);
+        EventBus.emit('preset:changed', { preset: name });
+    }
+
+    function getActivePreset() {
+        return BrushEngine.getActivePreset();
+    }
+
+    // Updates which preset button shows the active state in
+    // the classic toolbar preset control.
+    function updatePresetActiveState(preset) {
+        const presetControl = document.getElementById('brush-preset-control');
+        if (!presetControl) return;
+
+        presetControl.querySelectorAll('.preset-button').forEach((btn) => {
+            const isActive = btn.getAttribute('data-preset') === preset;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
     }
 
     function setupBrushSizeSlider() {
@@ -164,6 +246,7 @@ const Toolbar = (() => {
 
         FeedbackManager.showToast('Saved!');
         ProgressManager.saveCurrentProject();
+        EventBus.emit('save:complete');
     }
 
     function setupSaveButton() {
@@ -220,9 +303,58 @@ const Toolbar = (() => {
         });
     }
 
+    // Handles eyedropper taps on the canvas. When the eyedropper
+    // tool is active, reads the pixel color at the tap point, sets
+    // it as the active color, adds to recent colors, shows a toast,
+    // and auto-switches back to the previous tool. (ADR-018)
+    function setupEyedropperHandler() {
+        const interactionCanvas = CanvasManager.getInteractionCanvas();
+        let isEyedropperDown = false;
+        let eyedropperStartX = 0;
+        let eyedropperStartY = 0;
+
+        interactionCanvas.addEventListener('pointerdown', (event) => {
+            if (activeTool !== 'eyedropper') return;
+            if (typeof ViewportManager !== 'undefined' && ViewportManager.isPanActive()) return;
+            event.preventDefault();
+
+            isEyedropperDown = true;
+            eyedropperStartX = event.clientX;
+            eyedropperStartY = event.clientY;
+        });
+
+        interactionCanvas.addEventListener('pointerup', (event) => {
+            if (!isEyedropperDown || activeTool !== 'eyedropper') {
+                isEyedropperDown = false;
+                return;
+            }
+            isEyedropperDown = false;
+
+            // Only sample if the pointer didn't move much (tap, not drag)
+            const dx = event.clientX - eyedropperStartX;
+            const dy = event.clientY - eyedropperStartY;
+            const tapThreshold = 10 * (typeof ViewportManager !== 'undefined' ? ViewportManager.getScale() : 1);
+            if (Math.sqrt(dx * dx + dy * dy) > tapThreshold) return;
+
+            const coords = CanvasManager.getCanvasPixelCoords(event);
+            const sampledColor = CanvasManager.getPixelColorAt(coords.x, coords.y);
+
+            if (sampledColor === null) return;
+
+            ColorPalette.setCurrentColor(sampledColor);
+            ColorPicker.addRecentColor(sampledColor);
+            FeedbackManager.showToast('Color picked!');
+
+            // Auto-switch-back to previous tool (ADR-018)
+            const restoreTool = previousToolBeforeEyedropper || 'brush';
+            previousToolBeforeEyedropper = null;
+            setActiveTool(restoreTool);
+        });
+    }
+
     // Keyboard shortcuts for desktop/laptop users and accessibility.
     // Ctrl+Z = undo, Ctrl+Y / Ctrl+Shift+Z = redo, B = brush,
-    // F = fill, E = eraser, [ / ] = brush size down/up.
+    // F = fill, E = eraser, I = eyedropper (ADR-018), [ / ] = brush size down/up.
     // Shortcuts are suppressed when a modal is open so they don't
     // interfere with modal interactions.
     function setupKeyboardShortcuts() {
@@ -266,6 +398,18 @@ const Toolbar = (() => {
                 setActiveTool('fill');
             } else if (key === 'e') {
                 setActiveTool('eraser');
+            } else if (key === 'i') {
+                setActiveTool('eyedropper');
+            } else if (key === '1') {
+                setActivePreset('marker');
+            } else if (key === '2') {
+                setActivePreset('crayon');
+            } else if (key === '3') {
+                setActivePreset('watercolor');
+            } else if (key === '4') {
+                setActivePreset('pencil');
+            } else if (key === '5') {
+                setActivePreset('sparkle');
             } else if (key === '[') {
                 const currentSize = BrushEngine.getBrushSize();
                 setBrushSize(Math.max(MIN_BRUSH_SIZE, currentSize - BRUSH_SIZE_STEP));
@@ -285,6 +429,8 @@ const Toolbar = (() => {
         getActiveTool,
         setActiveTool,
         setBrushSize,
+        setActivePreset,
+        getActivePreset,
         saveAndDownload
     };
 })();

@@ -13,20 +13,21 @@
  *   - clearCommands: Empties both stacks
  *   - getUndoDepth / getRedoDepth: Returns stack sizes for UI indicators
  *   - createCanvasCommand: Factory for full-canvas ImageData commands
+ *   - createRegionCommand: Factory for bounding-box ImageData commands (ADR-017)
  *
  * Dependencies: CanvasManager (for canvas/context access and withNativeTransform)
  *
- * Notes: Phase 1 captures full-canvas ImageData per command. Bounding-box
- *   optimization (capturing only affected regions) will be added when
- *   BrushEngine and FloodFill report their affected bounding boxes.
- *   See ADR-011 for the command interface specification.
+ * Notes: Commands come in two forms: full-canvas (for clear, image load) and
+ *   region-specific (for brush strokes, flood fills). Region commands store
+ *   only the affected bounding box, reducing memory from ~32 MB to ~300 KB
+ *   per command. See ADR-011 and ADR-017 for specifications.
  */
 
 const CommandManager = (() => {
-    // MEMORY NOTE: Each command stores two full-canvas ImageData objects
-    // (before + after). At 2048x2048x4 = 16 MB each, worst case is
-    // 32 MB/command x 50 = 1.6 GB. Bounding-box optimization in Phase 2
-    // will reduce this to ~330 KB/command typical. See ADR-011.
+    // MEMORY NOTE: Region commands store only the affected bounding box
+    // (~300 KB typical for a brush stroke). Full-canvas commands (~16 MB
+    // each) are still used for clear/load operations. At 50 steps with
+    // mostly region commands, typical memory is ~15 MB. See ADR-017.
     const MAX_UNDO_STEPS = 50;
     let undoStack = [];
     let redoStack = [];
@@ -57,6 +58,37 @@ const CommandManager = (() => {
                 const ctx = CanvasManager.getColoringContext();
                 CanvasManager.withNativeTransform(ctx, (c) => {
                     c.putImageData(this.afterImageData, 0, 0);
+                });
+            }
+        };
+    }
+
+    // Creates a command object that stores ImageData for only the
+    // affected bounding-box region. undo() restores the before region;
+    // redo() restores the after region. Both use putImageData with
+    // the bbox offset for partial canvas restore. (ADR-017)
+    function createRegionCommand(type, bbox, beforeImageData, afterImageData) {
+        return {
+            type: type,
+            timestamp: Date.now(),
+            boundingBox: {
+                x: bbox.x,
+                y: bbox.y,
+                width: bbox.width,
+                height: bbox.height
+            },
+            beforeImageData: beforeImageData,
+            afterImageData: afterImageData,
+            undo() {
+                const ctx = CanvasManager.getColoringContext();
+                CanvasManager.withNativeTransform(ctx, (c) => {
+                    c.putImageData(this.beforeImageData, this.boundingBox.x, this.boundingBox.y);
+                });
+            },
+            redo() {
+                const ctx = CanvasManager.getColoringContext();
+                CanvasManager.withNativeTransform(ctx, (c) => {
+                    c.putImageData(this.afterImageData, this.boundingBox.x, this.boundingBox.y);
                 });
             }
         };
@@ -115,6 +147,7 @@ const CommandManager = (() => {
 
     return {
         createCanvasCommand,
+        createRegionCommand,
         pushCommand,
         undoCommand,
         redoCommand,

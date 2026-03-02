@@ -22,6 +22,14 @@
                 <button id="tab-my-art" class="gallery-tab">My Art</button>
             </div>
             <div id="templates-panel" class="gallery-panel">
+                <div class="gallery-controls studio-only">
+                    <input id="gallery-search" type="text" class="gallery-search" placeholder="Search templates..." aria-label="Search templates">
+                    <select id="gallery-sort" class="gallery-sort" aria-label="Sort templates">
+                        <option value="category">By Category</option>
+                        <option value="name">A-Z</option>
+                        <option value="difficulty">By Difficulty</option>
+                    </select>
+                </div>
                 <div id="gallery-grid" class="gallery-grid"></div>
                 <label class="upload-button" id="upload-button-label">
                     Upload Your Own
@@ -83,6 +91,7 @@
         <button class="kids-tool-bubble active" aria-label="Fill" aria-pressed="true" data-tool="fill">&#x1FAA3;</button>
         <button class="kids-tool-bubble" aria-label="Brush" aria-pressed="false" data-tool="brush">&#x1F58C;&#xFE0F;</button>
         <button class="kids-tool-bubble" aria-label="Eraser" aria-pressed="false" data-tool="eraser">&#x1F9FD;</button>
+        <button class="kids-tool-bubble" aria-label="Eyedropper" aria-pressed="false" data-tool="eyedropper">&#x1F50D;</button>
     </div>
 
     <!-- Kids undo/redo bar (top right) -->
@@ -96,6 +105,15 @@
         <button class="kids-size-bubble size-small" data-brush-size="8" aria-label="Small brush"></button>
         <button class="kids-size-bubble size-medium active" data-brush-size="16" aria-label="Medium brush"></button>
         <button class="kids-size-bubble size-large" data-brush-size="28" aria-label="Large brush"></button>
+    </div>
+
+    <!-- Kids brush preset bubbles (bottom center, visible only with brush tool) -->
+    <div id="kids-preset-bubbles" class="kids-preset-bubbles kids-only hidden" role="radiogroup" aria-label="Brush style">
+        <button class="kids-preset-bubble active" data-preset="marker" aria-label="Marker" aria-pressed="true">&#x270F;&#xFE0F;</button>
+        <button class="kids-preset-bubble" data-preset="crayon" aria-label="Crayon" aria-pressed="false">&#x1F58D;&#xFE0F;</button>
+        <button class="kids-preset-bubble" data-preset="watercolor" aria-label="Watercolor" aria-pressed="false">&#x1F3A8;</button>
+        <button class="kids-preset-bubble" data-preset="pencil" aria-label="Pencil" aria-pressed="false">&#x270D;&#xFE0F;</button>
+        <button class="kids-preset-bubble" data-preset="sparkle" aria-label="Sparkle" aria-pressed="false">&#x2728;</button>
     </div>
 
     <!-- Kids action buttons (top left) -->
@@ -114,8 +132,24 @@
     <button id="hand-toggle" class="hand-toggle kids-only" aria-label="Switch hand side">&#x270B;</button>
 
     <!-- ===== STUDIO MODE UI ===== -->
+    <!-- Studio brush preset bar (above dock, visible only with brush tool) -->
+    <div id="studio-preset-bar" class="studio-preset-bar studio-only hidden" role="radiogroup" aria-label="Brush preset">
+        <button class="studio-preset-btn active" data-preset="marker" aria-pressed="true" title="Marker (1)">Marker</button>
+        <button class="studio-preset-btn" data-preset="crayon" aria-pressed="false" title="Crayon (2)">Crayon</button>
+        <button class="studio-preset-btn" data-preset="watercolor" aria-pressed="false" title="Watercolor (3)">Water</button>
+        <button class="studio-preset-btn" data-preset="pencil" aria-pressed="false" title="Pencil (4)">Pencil</button>
+        <button class="studio-preset-btn" data-preset="sparkle" aria-pressed="false" title="Sparkle (5)">Sparkle</button>
+    </div>
+
+    <!-- Studio radial menu (ADR-023) -->
+    <div id="radial-menu" class="radial-menu studio-only" role="menu" aria-label="Tool menu" style="pointer-events: none;"></div>
+
     <!-- Floating dock (bottom center) -->
     <div id="dock" class="dock studio-only" role="toolbar" aria-label="Tool dock">
+        <button id="radial-trigger" class="dock-tool dock-trigger" aria-label="Open tool menu" aria-haspopup="true" title="Tool Menu">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+        <div class="dock-divider"></div>
         <button class="dock-tool active" data-tool="fill" aria-label="Fill" title="Fill">
             <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg>
         </button>
@@ -124,6 +158,9 @@
         </button>
         <button class="dock-tool" data-tool="eraser" aria-label="Eraser" title="Eraser">
             <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>
+        </button>
+        <button class="dock-tool" data-tool="eyedropper" aria-label="Eyedropper" title="Eyedropper (I)">
+            <svg viewBox="0 0 24 24" class="dock-tool-icon"><path d="M20.71 5.63l-2.34-2.34a1 1 0 00-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.42 1.41-8.04 8.04c-.55.56-.85 1.29-.85 2.07v2.64c0 .55.45 1 1 1h2.64c.78 0 1.52-.31 2.07-.85l8.04-8.04 1.41 1.41 1.42-1.41-1.42-1.42 3.13-3.12a.996.996 0 000-1.41zM6.92 19.07a.5.5 0 01-.35.14H5v-1.57a.5.5 0 01.14-.35l7.76-7.76 1.78 1.78-7.76 7.76z"/></svg>
         </button>
         <div class="dock-divider"></div>
         <button id="studio-gallery" class="dock-tool" aria-label="Gallery" title="Gallery">
@@ -192,9 +229,20 @@
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 01-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l10.6-10.6c.79-.78 2.05-.78 2.83 0zM4.22 15.58l3.54 3.53c.78.79 2.04.79 2.83 0l3.53-3.53-4.95-4.95-4.95 4.95z"/></svg>
             <span class="tool-label">Eraser</span>
         </button>
+        <button id="tool-eyedropper" class="tool-button" title="Eyedropper (I)" aria-pressed="false" aria-label="Eyedropper tool">
+            <svg viewBox="0 0 24 24" class="tool-icon"><path d="M20.71 5.63l-2.34-2.34a1 1 0 00-1.41 0l-3.12 3.12-1.41-1.42-1.42 1.42 1.42 1.41-8.04 8.04c-.55.56-.85 1.29-.85 2.07v2.64c0 .55.45 1 1 1h2.64c.78 0 1.52-.31 2.07-.85l8.04-8.04 1.41 1.41 1.42-1.41-1.42-1.42 3.13-3.12a.996.996 0 000-1.41zM6.92 19.07a.5.5 0 01-.35.14H5v-1.57a.5.5 0 01.14-.35l7.76-7.76 1.78 1.78-7.76 7.76z"/></svg>
+            <span class="tool-label">Picker</span>
+        </button>
         <div id="brush-size-control" class="brush-size-control hidden">
             <input type="range" id="brush-size-slider" min="4" max="40" value="12" class="brush-size-slider">
             <span id="brush-size-value" class="brush-size-value">12</span>
+        </div>
+        <div id="brush-preset-control" class="brush-preset-control hidden" role="radiogroup" aria-label="Brush preset">
+            <button class="preset-button active" data-preset="marker" aria-pressed="true" title="Marker (1)">Marker</button>
+            <button class="preset-button" data-preset="crayon" aria-pressed="false" title="Crayon (2)">Crayon</button>
+            <button class="preset-button" data-preset="watercolor" aria-pressed="false" title="Watercolor (3)">Water</button>
+            <button class="preset-button" data-preset="pencil" aria-pressed="false" title="Pencil (4)">Pencil</button>
+            <button class="preset-button" data-preset="sparkle" aria-pressed="false" title="Sparkle (5)">Sparkle</button>
         </div>
         <button id="tool-undo" class="tool-button" title="Undo">
             <svg viewBox="0 0 24 24" class="tool-icon"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
@@ -236,6 +284,9 @@
     <!-- "+" swatch to open color picker (appended after palette swatches) -->
     <button id="picker-open-btn" class="picker-open-btn" aria-label="Open color picker" title="Custom color">+</button>
 
+    <!-- Celebration overlay (ADR-022, pointer-events:none so drawing is never blocked) -->
+    <div id="celebration-container" class="celebration-container" aria-hidden="true"></div>
+
     <!-- Toast notification -->
     <div id="toast-container" class="toast-container hidden" role="alert" aria-live="assertive">
         <span id="toast-message" class="toast-message"></span>
@@ -255,6 +306,8 @@
     <script src="js/brush-engine.js"></script>
     <script src="js/image-loader.js"></script>
     <script src="js/toolbar.js"></script>
+    <script src="js/celebration-manager.js"></script>
+    <script src="js/radial-menu.js"></script>
     <script src="js/storage-manager.js"></script>
     <script src="js/progress-manager.js"></script>
     <script src="js/app.js"></script>

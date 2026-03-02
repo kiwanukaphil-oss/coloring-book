@@ -113,6 +113,7 @@ const ProgressManager = (() => {
                 thumbnailBlob: thumbnailBlob,
                 activeTool: Toolbar.getActiveTool(),
                 brushSize: BrushEngine.getBrushSize(),
+                activePreset: BrushEngine.getActivePreset(),
                 activeColor: ColorPalette.getCurrentColor(),
                 status: 'in-progress',
                 createdAt: parseInt(currentProjectId.split('-')[1], 10),
@@ -201,6 +202,7 @@ const ProgressManager = (() => {
                 // Restore tool settings
                 Toolbar.setActiveTool(project.activeTool || 'fill');
                 Toolbar.setBrushSize(project.brushSize || 12);
+                Toolbar.setActivePreset(project.activePreset || 'marker');
                 ColorPalette.setCurrentColor(project.activeColor || '#FF0000');
 
                 // Set up undo with the restored state as baseline

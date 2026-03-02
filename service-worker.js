@@ -20,7 +20,7 @@
  *   requests fall back to index.html for SPA-style routing support.
  */
 
-const CACHE_VERSION = 'coloring-book-v14';
+const CACHE_VERSION = 'coloring-book-v17';
 
 const ASSETS_TO_CACHE = [
     './',
@@ -44,6 +44,8 @@ const ASSETS_TO_CACHE = [
     './js/feedback-manager.js',
     './js/storage-manager.js',
     './js/progress-manager.js',
+    './js/celebration-manager.js',
+    './js/radial-menu.js',
     './images/icons/icon-192.svg',
     './images/icons/icon-512.svg',
     './images/coloring-pages/cat.svg',
@@ -54,6 +56,9 @@ const ASSETS_TO_CACHE = [
     './images/coloring-pages/flower.svg',
     './images/coloring-pages/unicorn.svg',
     './images/coloring-pages/car.svg',
+    './templates/manifest.json',
+    './workers/fill-worker.js',
+    './workers/mask-worker.js',
 ];
 
 // Caches all core app assets during service worker installation
@@ -105,7 +110,8 @@ function isStaticAssetRequest(request) {
         url.pathname.endsWith('.json') ||
         url.pathname.startsWith('/images/') ||
         url.pathname.startsWith('/css/') ||
-        url.pathname.startsWith('/js/')
+        url.pathname.startsWith('/js/') ||
+        url.pathname.startsWith('/workers/')
     );
 }
 
