@@ -25,7 +25,10 @@
 
 const StorageManager = (() => {
     const DB_NAME = 'coloring-book-db';
-    const DB_VERSION = 1;
+    // v2 adds coloringBlobs[] and layerMetadata[] to the project schema.
+    // No structural store changes needed — migration is handled at read time
+    // in ProgressManager via the fallback: coloringBlobs || [coloringBlob]. (ADR-024)
+    const DB_VERSION = 2;
     const PROJECTS_STORE = 'projects';
 
     let db = null;

@@ -168,6 +168,12 @@
     display: none !important;
 }
 
+/* Hides an element while preserving layout space (ADR-003).
+   Used when removing the element would cause layout shift. */
+.visually-hidden {
+    visibility: hidden;
+}
+
 html, body {
     width: 100%;
     height: 100%;
@@ -464,6 +470,33 @@ html, body {
     font-size: 13px;
     font-weight: 600;
     min-width: 20px;
+    text-align: center;
+}
+
+/* --- Brush Opacity Control (ADR-027) --- */
+.brush-opacity-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+}
+
+.brush-opacity-control.hidden {
+    display: none;
+}
+
+.brush-opacity-slider {
+    width: 90px;
+    height: 28px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.brush-opacity-value {
+    color: var(--color-text-on-dark);
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 32px;
     text-align: center;
 }
 
@@ -1803,4 +1836,165 @@ html, body {
     -webkit-backdrop-filter: none;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
+}
+
+/* =============================================
+   LAYER PANEL (ADR-025)
+   Studio mode only; hidden in Kids mode via ModeManager
+   ============================================= */
+
+.layer-panel {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 180px;
+    background: var(--color-panel-bg, var(--color-surface));
+    border-radius: var(--radius-panel, 12px) 0 0 var(--radius-panel, 12px);
+    border: 1px solid var(--color-border);
+    border-right: none;
+    box-shadow: var(--shadow-panel, 0 4px 16px rgba(0, 0, 0, 0.12));
+    z-index: 50;
+    overflow: hidden;
+}
+
+.layer-panel.hidden {
+    display: none;
+}
+
+.layer-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.layer-panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.layer-add-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-accent);
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.layer-add-btn:focus-visible {
+    outline: 3px solid var(--color-focus, var(--color-accent));
+    outline-offset: 2px;
+}
+
+.layer-add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.layer-list {
+    list-style: none;
+    padding: 4px 0;
+    margin: 0;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.layer-list-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    margin: 2px 4px;
+    transition: background 0.1s;
+}
+
+.layer-list-item:hover {
+    background: var(--color-hover, rgba(0, 0, 0, 0.05));
+}
+
+.layer-list-item.active {
+    border-color: var(--color-accent);
+    background: var(--color-accent-subtle, rgba(255, 111, 0, 0.08));
+}
+
+.layer-list-item:focus-visible {
+    outline: 3px solid var(--color-focus, var(--color-accent));
+    outline-offset: 2px;
+}
+
+/* Visual feedback when a layer item is a valid drag-drop target (ADR-025) */
+.layer-list-item.drag-over {
+    outline: 2px dashed var(--color-accent);
+    outline-offset: -2px;
+}
+
+.layer-thumbnail {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    flex-shrink: 0;
+    background: #ffffff;
+}
+
+.layer-name {
+    font-size: 11px;
+    color: var(--color-text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.layer-visibility-btn,
+.layer-delete-btn {
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.layer-visibility-btn:focus-visible,
+.layer-delete-btn:focus-visible {
+    outline: 3px solid var(--color-focus, var(--color-accent));
+    outline-offset: 1px;
+}
+
+.layer-opacity-slider {
+    width: 44px;
+    flex-shrink: 0;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+}
+
+/* Dark mode overrides for layer panel */
+[data-theme="dark"] .layer-panel {
+    background: var(--color-panel-bg);
+    border-color: var(--color-border);
+}
+
+[data-theme="dark"] .layer-list-item.active {
+    background: rgba(255, 111, 0, 0.15);
 }

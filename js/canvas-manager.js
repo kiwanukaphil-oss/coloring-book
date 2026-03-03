@@ -1,10 +1,11 @@
 /**
  * Canvas Manager
  *
- * Responsible for: Creating and managing the 4-layer canvas system (coloring, reference,
- *   outline, interaction), DPI-aware sizing, image loading, and composite rendering.
+ * Responsible for: Creating and managing the canvas system (reference, outline,
+ *   interaction, cursor layers + user coloring layers via LayerManager), DPI-aware sizing,
+ *   image loading, and composite rendering.
  * NOT responsible for: Drawing strokes (BrushEngine), flood fill logic (FloodFill),
- *   or undo state (UndoManager).
+ *   undo state (UndoManager), or coloring layer creation (LayerManager).
  *
  * Key functions:
  *   - withNativeTransform: Wraps canvas ops at native pixel resolution (ADR-007)
@@ -13,30 +14,31 @@
  *   - loadReferenceImage: Loads a guide image onto the reference layer
  *   - resizeCanvasesToFitContainer: Recalculates canvas dimensions on viewport change
  *   - makeWhitePixelsTransparent: Removes white backgrounds from loaded outline images
- *   - renderCompositeForSave: Composites coloring + outline layers for PNG export
+ *   - renderCompositeForSave: Composites all coloring layers + outline for PNG export
  *   - handleWindowResize: Snapshots and restores all layers when the viewport changes
  *   - computeOutlineMask: Builds binary Uint8Array mask for edge-aware brush (ADR-008)
  *   - computeOutlineMaskAsync: Worker-accelerated mask computation (ADR-021)
  *   - getOutlineMask: Returns precomputed mask for O(1) outline pixel checks
- *   - getPixelColorAt: Reads a single pixel from the coloring canvas, returns hex (ADR-018)
+ *   - getPixelColorAt: Reads a single pixel from the active coloring layer, returns hex (ADR-018)
  *
- * Dependencies: None (foundational module — all other modules depend on this)
+ * Dependencies: LayerManager (initialized inside initialize(); coloring layers are managed there)
  *
  * Notes: Canvas resolution is capped at MAX_CANVAS_DIMENSION (2048) to prevent
  *   performance issues on high-DPI tablets. All drawing must go through
  *   withNativeTransform to bypass the DPI scale factor applied via ctx.scale().
+ *   getColoringCanvas() and getColoringContext() proxy to LayerManager's active layer
+ *   so all callers automatically target the user's currently selected layer. (ADR-024)
  */
 
 const CanvasManager = (() => {
     const MAX_CANVAS_DIMENSION = 2048;
 
     let container = null;
-    let coloringCanvas = null;
+    // coloringCanvas and coloringCtx are removed — proxied via LayerManager (ADR-024)
     let referenceCanvas = null;
     let outlineCanvas = null;
     let interactionCanvas = null;
     let cursorCanvas = null;
-    let coloringCtx = null;
     let referenceCtx = null;
     let outlineCtx = null;
     let interactionCtx = null;
@@ -81,26 +83,27 @@ const CanvasManager = (() => {
         };
     }
 
-    // Grabs DOM elements and creates drawing contexts. Three of the four
-    // contexts use willReadFrequently because flood fill and undo both
-    // call getImageData extensively — this hint lets the browser optimize
-    // for frequent pixel reads instead of GPU-accelerated rendering.
+    // Grabs DOM elements and creates drawing contexts. Coloring layers are created
+    // dynamically by LayerManager (ADR-024). The remaining contexts use
+    // willReadFrequently where getImageData is called frequently.
     function initialize() {
         container = document.getElementById('canvas-container');
-        coloringCanvas = document.getElementById('coloring-canvas');
         referenceCanvas = document.getElementById('reference-canvas');
         outlineCanvas = document.getElementById('outline-canvas');
         interactionCanvas = document.getElementById('interaction-canvas');
         cursorCanvas = document.getElementById('cursor-canvas');
 
-        coloringCtx = coloringCanvas.getContext('2d', { willReadFrequently: true });
         referenceCtx = referenceCanvas.getContext('2d', { willReadFrequently: true });
         outlineCtx = outlineCanvas.getContext('2d', { willReadFrequently: true });
         interactionCtx = interactionCanvas.getContext('2d');
         cursorCtx = cursorCanvas.getContext('2d');
 
-        resizeCanvasesToFitContainer();
-        fillColoringCanvasWhite();
+        const { canvasWidth, canvasHeight, scaleFactor } = resizeCanvasesToFitContainer();
+
+        // Initialize LayerManager with computed canvas dimensions (ADR-024).
+        // LayerManager creates layer-0 and fills it white.
+        LayerManager.initialize(container, canvasWidth, canvasHeight, scaleFactor);
+
         initializeMaskWorker();
 
         window.addEventListener('resize', handleWindowResize);
@@ -159,10 +162,11 @@ const CanvasManager = (() => {
     // Resolve callback for async mask computation (ADR-021)
     let pendingMaskResolve = null;
 
-    // Calculates the optimal canvas resolution based on the
-    // container size and device pixel ratio, capped at
-    // MAX_CANVAS_DIMENSION to prevent performance issues on
-    // high-DPI tablets
+    // Calculates the optimal canvas resolution based on the container size and
+    // device pixel ratio, capped at MAX_CANVAS_DIMENSION. Resizes the four
+    // static canvases (reference, outline, interaction, cursor) and delegates
+    // coloring layer resizing to LayerManager. Returns the computed dimensions
+    // and scaleFactor so initialize() can pass them to LayerManager.
     function resizeCanvasesToFitContainer() {
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
@@ -175,25 +179,26 @@ const CanvasManager = (() => {
         const canvasWidth = Math.floor(containerWidth * scaleFactor);
         const canvasHeight = Math.floor(containerHeight * scaleFactor);
 
-        [coloringCanvas, referenceCanvas, outlineCanvas, interactionCanvas, cursorCanvas].forEach((canvas) => {
+        [referenceCanvas, outlineCanvas, interactionCanvas, cursorCanvas].forEach((canvas) => {
             canvas.width = canvasWidth;
             canvas.height = canvasHeight;
             canvas.style.width = containerWidth + 'px';
             canvas.style.height = containerHeight + 'px';
         });
 
-        coloringCtx.scale(scaleFactor, scaleFactor);
         referenceCtx.scale(scaleFactor, scaleFactor);
         outlineCtx.scale(scaleFactor, scaleFactor);
         interactionCtx.scale(scaleFactor, scaleFactor);
         cursorCtx.scale(scaleFactor, scaleFactor);
-    }
 
-    function fillColoringCanvasWhite() {
-        withNativeTransform(coloringCtx, (ctx) => {
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        });
+        // Resize coloring layers if LayerManager is already initialized
+        // (not on the very first call from initialize(), where LayerManager
+        // is initialized separately right after this call).
+        if (LayerManager.getLayerCount() > 0) {
+            LayerManager.resizeLayers(canvasWidth, canvasHeight, scaleFactor);
+        }
+
+        return { canvasWidth, canvasHeight, scaleFactor };
     }
 
     // Loads a coloring page image onto the outline canvas,
@@ -206,8 +211,8 @@ const CanvasManager = (() => {
             image.crossOrigin = 'anonymous';
 
             image.onload = () => {
+                // clearAllCanvases() already fills layer-0 white via LayerManager.clearAllLayers() (ADR-024)
                 clearAllCanvases();
-                fillColoringCanvasWhite();
 
                 const containerWidth = container.clientWidth;
                 const containerHeight = container.clientHeight;
@@ -388,9 +393,8 @@ const CanvasManager = (() => {
     }
 
     function clearAllCanvases() {
-        withNativeTransform(coloringCtx, (ctx) => {
-            ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        });
+        // Clear all coloring layers (layer-0 gets white fill, others transparent)
+        LayerManager.clearAllLayers();
         withNativeTransform(outlineCtx, (ctx) => {
             ctx.clearRect(0, 0, outlineCanvas.width, outlineCanvas.height);
         });
@@ -401,11 +405,19 @@ const CanvasManager = (() => {
         outlineMask = null;
     }
 
+    // Clears only the active coloring layer. Kept for internal use
+    // where a single-layer clear is appropriate (e.g. image load).
     function clearColoringCanvas() {
-        withNativeTransform(coloringCtx, (ctx) => {
-            ctx.clearRect(0, 0, coloringCanvas.width, coloringCanvas.height);
-        });
-        fillColoringCanvasWhite();
+        LayerManager.clearActiveLayer();
+    }
+
+    // Clears every coloring layer (layer-0 to white, others transparent).
+    // Used by the Clear button for a non-undoable fresh start. (ADR-024, ADR-026)
+    // Intentionally does NOT clear the outline, interaction, or reference canvases —
+    // the user's coloring page template must remain visible. Use clearAllCanvases()
+    // only when loading a new template (which reloads the outline itself).
+    function clearAllColoringCanvases() {
+        LayerManager.clearAllLayers();
     }
 
     function clearReferenceCanvas() {
@@ -414,32 +426,33 @@ const CanvasManager = (() => {
         });
     }
 
-    // Composites the coloring and outline layers onto an offscreen
-    // canvas and returns a PNG data URL for saving/downloading
+    // Composites all visible coloring layers and the outline layer onto an
+    // offscreen canvas and returns a PNG data URL for saving/downloading. (ADR-024)
     function renderCompositeForSave() {
+        const composite = LayerManager.compositeAllLayers();
         const offscreen = document.createElement('canvas');
-        offscreen.width = coloringCanvas.width;
-        offscreen.height = coloringCanvas.height;
+        offscreen.width = composite.width;
+        offscreen.height = composite.height;
         const ctx = offscreen.getContext('2d');
 
-        ctx.drawImage(coloringCanvas, 0, 0);
+        ctx.drawImage(composite, 0, 0);
         ctx.drawImage(outlineCanvas, 0, 0);
 
         return offscreen.toDataURL('image/png');
     }
 
     function handleWindowResize() {
-        // Snapshot layers before resizing so they can be
+        // Snapshot all layers before resizing so they can be
         // re-rendered proportionally at the new resolution.
-        const coloringSnapshot = captureCanvasSnapshot(coloringCanvas);
+        const layerSnapshots = LayerManager.snapshotAllLayers();
         const referenceSnapshot = captureCanvasSnapshot(referenceCanvas);
         const outlineSnapshot = captureCanvasSnapshot(outlineCanvas);
 
-        resizeCanvasesToFitContainer();
+        const { canvasWidth, canvasHeight } = resizeCanvasesToFitContainer();
 
-        restoreScaledSnapshot(coloringCtx, coloringCanvas, coloringSnapshot);
         restoreScaledSnapshot(referenceCtx, referenceCanvas, referenceSnapshot);
         restoreScaledSnapshot(outlineCtx, outlineCanvas, outlineSnapshot);
+        LayerManager.restoreAllLayersFromSnapshots(layerSnapshots, canvasWidth, canvasHeight);
 
         // Recompute mask from rescaled outline pixels (ADR-008)
         if (outlineMask) {
@@ -469,20 +482,22 @@ const CanvasManager = (() => {
         });
     }
 
-    // Reads the color of a single pixel on the coloring canvas at
+    // Reads the color of a single pixel on the active coloring layer at
     // native canvas coordinates. Returns a hex string (#RRGGBB) or
     // null if the pixel is fully transparent. Used by the eyedropper
     // tool (ADR-018). Coordinates must already be in canvas pixel
     // space (via getCanvasPixelCoords per ADR-002).
     function getPixelColorAt(canvasX, canvasY) {
+        const activeCanvas = LayerManager.getActiveLayerCanvas();
+        const activeCtx = LayerManager.getActiveLayerContext();
         const x = Math.floor(canvasX);
         const y = Math.floor(canvasY);
 
-        if (x < 0 || x >= coloringCanvas.width || y < 0 || y >= coloringCanvas.height) {
+        if (x < 0 || x >= activeCanvas.width || y < 0 || y >= activeCanvas.height) {
             return null;
         }
 
-        const pixel = withNativeTransform(coloringCtx, (ctx) => {
+        const pixel = withNativeTransform(activeCtx, (ctx) => {
             return ctx.getImageData(x, y, 1, 1).data;
         });
 
@@ -497,7 +512,8 @@ const CanvasManager = (() => {
     // Returns the pixel-ratio-aware scale factor used by the canvas,
     // needed by other modules to convert CSS coords to canvas coords
     function getScaleFactor() {
-        return coloringCanvas.width / parseInt(coloringCanvas.style.width);
+        const activeCanvas = LayerManager.getActiveLayerCanvas();
+        return activeCanvas.width / parseInt(activeCanvas.style.width);
     }
 
     return {
@@ -508,12 +524,14 @@ const CanvasManager = (() => {
         loadOutlineImage,
         loadReferenceImage,
         clearColoringCanvas,
+        clearAllColoringCanvases,
         clearReferenceCanvas,
         clearAllCanvases,
         renderCompositeForSave,
         getScaleFactor,
-        getColoringCanvas: () => coloringCanvas,
-        getColoringContext: () => coloringCtx,
+        // Proxy to LayerManager's active layer (ADR-024)
+        getColoringCanvas: () => LayerManager.getActiveLayerCanvas(),
+        getColoringContext: () => LayerManager.getActiveLayerContext(),
         getReferenceCanvas: () => referenceCanvas,
         getReferenceContext: () => referenceCtx,
         getOutlineCanvas: () => outlineCanvas,

@@ -42,8 +42,18 @@ CanvasManager.withNativeTransform(coloringCtx, (ctx) => {
 });
 ```
 
-### Exception
+### Exception: canvas-manager.js internal use
 Within `canvas-manager.js` itself, the internal `withNativeTransform` function may be called directly (not via the module's public API) since it's in the same scope.
+
+### Exception: LayerManager circular dependency
+`LayerManager` is a foundational module that `CanvasManager` depends on. Calling
+`CanvasManager.withNativeTransform()` from inside `LayerManager` would create a circular
+dependency (`LayerManager → CanvasManager → LayerManager`). Therefore, `LayerManager`
+may use the raw `ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ... ctx.restore()`
+pattern directly. Each use must be accompanied by an inline comment referencing this exception.
+
+Affected functions in `layer-manager.js`: `fillLayerWhite`, `clearActiveLayer`,
+`clearAllLayers`, `restoreAllLayersFromSnapshots`.
 
 ### Return values
 If the callback needs to return a value (e.g., `getImageData`), the helper passes it through:

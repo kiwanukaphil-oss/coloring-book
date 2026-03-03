@@ -9,26 +9,23 @@
  * Key functions:
  *   - initialize: Creates fill worker for off-main-thread processing (ADR-021)
  *   - executeFloodFillAtPoint: Entry point — routes to worker or main thread fallback
- *   - scanlineFill: Core algorithm — processes horizontal spans via a stack,
- *       returns { filledPixelCount, bbox } for region-aware undo (ADR-017)
- *   - matchesTargetColor: Checks if a pixel is within FILL_TOLERANCE of the target
- *   - isOutlinePixel: Checks if a pixel is a dark outline boundary
  *
- * Dependencies: CanvasManager, UndoManager, FeedbackManager
+ * Dependencies: CanvasManager, UndoManager, FeedbackManager,
+ *   workers/fill-algorithm.js (loaded via <script> tag — provides scanlineFill,
+ *   matchesTargetColor, isOutlinePixel, FILL_TOLERANCE, and threshold constants)
  *
- * Notes: Uses tolerance-based matching (FILL_TOLERANCE = 32) to handle anti-aliased
- *   edges from SVG rendering. The outline canvas is read separately so fills stop at
- *   black lines regardless of what's on the coloring layer. Undo snapshot uses
- *   region-aware commands (ADR-017) to store only the filled bounding box.
+ * Notes: The fill algorithm (scanlineFill and helpers) lives in workers/fill-algorithm.js,
+ *   the single source of truth shared by this module and the fill worker. Undo snapshot
+ *   uses region-aware commands (ADR-017) to store only the filled bounding box.
  *   When a Web Worker is available, fills run off the main thread to eliminate
  *   frame drops on mid-range tablets (ADR-021). Classic mode (?classic=1) uses
  *   synchronous main-thread fills for test compatibility.
  */
 
 const FloodFill = (() => {
-    const FILL_TOLERANCE = 32;
-    const OUTLINE_LUMINANCE_THRESHOLD = 80;
-    const OUTLINE_ALPHA_THRESHOLD = 128;
+    // FILL_TOLERANCE, OUTLINE_LUMINANCE_THRESHOLD, OUTLINE_ALPHA_THRESHOLD,
+    // scanlineFill, matchesTargetColor, and isOutlinePixel are defined in
+    // workers/fill-algorithm.js and available as globals (loaded via <script>). (ADR-021)
     const SPINNER_DELAY_MS = 100;
 
     // Worker state (ADR-021)
@@ -203,7 +200,7 @@ const FloodFill = (() => {
             coloringPixels, outlinePixels, width, height,
             startX, startY,
             targetR, targetG, targetB, targetA,
-            fillColor
+            fillColor.r, fillColor.g, fillColor.b
         );
 
         if (fillResult.filledPixelCount === 0) {
@@ -312,150 +309,6 @@ const FloodFill = (() => {
             fillG: fillColor.g,
             fillB: fillColor.b
         }, [coloringPixels.buffer, outlinePixels.buffer]);
-    }
-
-    // Scanline stack-based flood fill: processes horizontal spans
-    // of matching pixels, pushing adjacent spans onto a stack.
-    // Returns { filledPixelCount, bbox } where bbox is the extent
-    // of all filled pixels for region-aware undo (ADR-017).
-    function scanlineFill(
-        pixels, outlinePixels, width, height,
-        startX, startY,
-        targetR, targetG, targetB, targetA,
-        fillColor
-    ) {
-        const visited = new Uint8Array(width * height);
-        const stack = [[startX, startY]];
-        let filledPixelCount = 0;
-
-        // Track bounding box of all filled pixels (ADR-017)
-        let bboxMinX = width;
-        let bboxMinY = height;
-        let bboxMaxX = 0;
-        let bboxMaxY = 0;
-
-        while (stack.length > 0) {
-            const [x, y] = stack.pop();
-
-            // Walk upward to find the topmost matching pixel in this column
-            let currentY = y;
-            while (
-                currentY >= 0 &&
-                matchesTargetColor(pixels, (currentY * width + x) * 4, targetR, targetG, targetB, targetA) &&
-                !isOutlinePixel(outlinePixels, (currentY * width + x) * 4)
-            ) {
-                currentY--;
-            }
-            currentY++;
-
-            let isScanningLeft = false;
-            let isScanningRight = false;
-
-            // Walk downward from the top, filling each pixel and
-            // checking left/right neighbors for new spans to process
-            while (
-                currentY < height &&
-                matchesTargetColor(pixels, (currentY * width + x) * 4, targetR, targetG, targetB, targetA) &&
-                !isOutlinePixel(outlinePixels, (currentY * width + x) * 4)
-            ) {
-                const pixelIndex = (currentY * width + x) * 4;
-                const flatIndex = currentY * width + x;
-
-                if (visited[flatIndex]) {
-                    currentY++;
-                    continue;
-                }
-                visited[flatIndex] = 1;
-
-                // Fill this pixel
-                pixels[pixelIndex] = fillColor.r;
-                pixels[pixelIndex + 1] = fillColor.g;
-                pixels[pixelIndex + 2] = fillColor.b;
-                pixels[pixelIndex + 3] = 255;
-                filledPixelCount++;
-
-                // Expand fill bounding box (ADR-017)
-                if (x < bboxMinX) bboxMinX = x;
-                if (x > bboxMaxX) bboxMaxX = x;
-                if (currentY < bboxMinY) bboxMinY = currentY;
-                if (currentY > bboxMaxY) bboxMaxY = currentY;
-
-                // Check left neighbor
-                if (x > 0) {
-                    const leftIndex = (currentY * width + (x - 1)) * 4;
-                    const leftFlat = currentY * width + (x - 1);
-                    const leftMatches =
-                        !visited[leftFlat] &&
-                        matchesTargetColor(pixels, leftIndex, targetR, targetG, targetB, targetA) &&
-                        !isOutlinePixel(outlinePixels, leftIndex);
-
-                    if (!isScanningLeft && leftMatches) {
-                        stack.push([x - 1, currentY]);
-                        isScanningLeft = true;
-                    } else if (!leftMatches) {
-                        isScanningLeft = false;
-                    }
-                }
-
-                // Check right neighbor
-                if (x < width - 1) {
-                    const rightIndex = (currentY * width + (x + 1)) * 4;
-                    const rightFlat = currentY * width + (x + 1);
-                    const rightMatches =
-                        !visited[rightFlat] &&
-                        matchesTargetColor(pixels, rightIndex, targetR, targetG, targetB, targetA) &&
-                        !isOutlinePixel(outlinePixels, rightIndex);
-
-                    if (!isScanningRight && rightMatches) {
-                        stack.push([x + 1, currentY]);
-                        isScanningRight = true;
-                    } else if (!rightMatches) {
-                        isScanningRight = false;
-                    }
-                }
-
-                currentY++;
-            }
-        }
-
-        return {
-            filledPixelCount: filledPixelCount,
-            bbox: {
-                x: bboxMinX,
-                y: bboxMinY,
-                width: bboxMaxX - bboxMinX + 1,
-                height: bboxMaxY - bboxMinY + 1
-            }
-        };
-    }
-
-    // Checks if a pixel's color is close enough to the target
-    // color within the configured tolerance. Handles anti-aliased
-    // edges by allowing small color differences.
-    function matchesTargetColor(pixels, index, targetR, targetG, targetB, targetA) {
-        return (
-            Math.abs(pixels[index] - targetR) <= FILL_TOLERANCE &&
-            Math.abs(pixels[index + 1] - targetG) <= FILL_TOLERANCE &&
-            Math.abs(pixels[index + 2] - targetB) <= FILL_TOLERANCE &&
-            Math.abs(pixels[index + 3] - targetA) <= FILL_TOLERANCE
-        );
-    }
-
-    // Determines if a pixel belongs to a dark outline by
-    // checking its luminance and alpha on the outline canvas.
-    // Dark, opaque pixels are treated as boundaries.
-    function isOutlinePixel(outlinePixels, index) {
-        const r = outlinePixels[index];
-        const g = outlinePixels[index + 1];
-        const b = outlinePixels[index + 2];
-        const a = outlinePixels[index + 3];
-
-        if (a < OUTLINE_ALPHA_THRESHOLD) {
-            return false;
-        }
-
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        return luminance < OUTLINE_LUMINANCE_THRESHOLD;
     }
 
     function hexToRgba(hex) {

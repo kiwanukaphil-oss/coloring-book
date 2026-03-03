@@ -16,6 +16,7 @@
  *   - setupFillTapHandler: Distinguishes taps from drags for flood fill
  *   - setupEyedropperHandler: Handles eyedropper tap with auto-switch-back (ADR-018)
  *   - getActiveTool: Returns 'fill', 'brush', 'eraser', or 'eyedropper'
+ *   - setBrushOpacity: Updates brush opacity in BrushEngine and syncs slider UI (ADR-027)
  *   - getActivePreset: Returns the active brush preset name (ADR-020)
  *
  * Dependencies: CanvasManager, FloodFill, ColorPalette, BrushEngine, UndoManager,
@@ -37,6 +38,7 @@ const Toolbar = (() => {
     function initialize() {
         setupToolSwitching();
         setupBrushSizeSlider();
+        setupBrushOpacitySlider();
         setupPresetSwitching();
         setupUndoButton();
         setupRedoButton();
@@ -89,6 +91,7 @@ const Toolbar = (() => {
         const eraserButton = document.getElementById('tool-eraser');
         const eyedropperButton = document.getElementById('tool-eyedropper');
         const brushSizeControl = document.getElementById('brush-size-control');
+        const brushOpacityControl = document.getElementById('brush-opacity-control');
 
         fillButton.classList.remove('active');
         brushButton.classList.remove('active');
@@ -104,19 +107,23 @@ const Toolbar = (() => {
         if (tool === 'fill') {
             fillButton.classList.add('active');
             brushSizeControl.classList.add('hidden');
+            brushOpacityControl.classList.add('hidden');
             CanvasManager.getInteractionCanvas().classList.remove('brush-active');
             CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
         } else if (tool === 'brush') {
             brushButton.classList.add('active');
             brushSizeControl.classList.remove('hidden');
+            brushOpacityControl.classList.remove('hidden');
             CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
         } else if (tool === 'eraser') {
             eraserButton.classList.add('active');
             brushSizeControl.classList.remove('hidden');
+            brushOpacityControl.classList.add('hidden');
             CanvasManager.getInteractionCanvas().classList.remove('eyedropper-active');
         } else if (tool === 'eyedropper') {
             if (eyedropperButton) eyedropperButton.classList.add('active');
             brushSizeControl.classList.add('hidden');
+            brushOpacityControl.classList.add('hidden');
             CanvasManager.getInteractionCanvas().classList.remove('brush-active');
             CanvasManager.getInteractionCanvas().classList.add('eyedropper-active');
         }
@@ -188,6 +195,22 @@ const Toolbar = (() => {
         BrushEngine.setBrushSize(size);
     }
 
+    function setupBrushOpacitySlider() {
+        document.getElementById('brush-opacity-slider').addEventListener('input', (event) => {
+            setBrushOpacity(parseInt(event.target.value, 10));
+        });
+    }
+
+    // Updates the brush opacity in BrushEngine and syncs the slider UI.
+    // Accepts an integer percentage (5–100); converts to 0.05–1.0 for BrushEngine.
+    function setBrushOpacity(percent) {
+        const slider = document.getElementById('brush-opacity-slider');
+        const valueDisplay = document.getElementById('brush-opacity-value');
+        slider.value = percent;
+        valueDisplay.textContent = percent + '%';
+        BrushEngine.setBrushOpacity(percent / 100);
+    }
+
     function setupUndoButton() {
         document.getElementById('tool-undo').addEventListener('pointerdown', () => {
             UndoManager.undoLastAction();
@@ -214,8 +237,10 @@ const Toolbar = (() => {
         });
 
         confirmYes.addEventListener('pointerdown', () => {
-            UndoManager.saveSnapshot();
-            CanvasManager.clearColoringCanvas();
+            // Clear is a non-undoable fresh start: wipe all layers and undo
+            // history so the cleared state is the new baseline. (ADR-024, ADR-026)
+            UndoManager.clearHistory();
+            CanvasManager.clearAllColoringCanvases();
             clearModal.classList.add('hidden');
             ProgressManager.scheduleAutoSave();
         });
@@ -429,6 +454,7 @@ const Toolbar = (() => {
         getActiveTool,
         setActiveTool,
         setBrushSize,
+        setBrushOpacity,
         setActivePreset,
         getActivePreset,
         saveAndDownload

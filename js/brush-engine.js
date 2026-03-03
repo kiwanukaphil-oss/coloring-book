@@ -16,6 +16,8 @@
  *   - updateCursorPreview: Draws a semi-transparent circle on the cursor canvas
  *   - clearCursorPreview: Clears the cursor canvas when pointer leaves
  *   - setBrushSize / getBrushSize: Controls the stroke width
+ *   - getStrokeContext: Returns scratch canvas (brush) or active layer context (eraser) for current stroke (ADR-027)
+ *   - setBrushOpacity / getBrushOpacity: Controls per-stroke opacity (ADR-027)
  *   - setActivePreset / getActivePreset: Switches brush preset (ADR-020)
  *
  * Dependencies: CanvasManager, Toolbar, UndoManager, ColorPalette
@@ -206,6 +208,16 @@ const BrushEngine = (() => {
     // Reset at stroke start. Only used for stamp-based presets (spacing > 0).
     let stampDistanceAccumulated = 0;
 
+    // Per-stroke scratch canvas for opacity compositing (ADR-027).
+    // Created on pointerdown for the brush tool; removed on pointerup.
+    // null when no stroke is in progress.
+    let scratchCanvas = null;
+    let scratchCtx = null;
+
+    // User-controlled brush opacity (0.05–1.0). Default 1.0 = fully opaque.
+    // Eraser always uses 1.0 regardless of this value. (ADR-027)
+    let brushOpacity = 1.0;
+
     // Stroke bounding box accumulator for region-aware undo (ADR-017).
     // Tracks the min/max canvas pixel coordinates across all coalesced
     // events in a single stroke, padded by brush radius on finalize.
@@ -262,6 +274,15 @@ const BrushEngine = (() => {
         return BRUSH_PRESETS[activePreset];
     }
 
+    // Returns the context to draw onto during a stroke. The brush tool uses
+    // scratchCtx so the full stroke can be composited at brushOpacity on pointerup,
+    // preventing within-stroke alpha compounding. (ADR-027)
+    // The eraser draws directly to the active layer — a partial-opacity erase
+    // would leave colour residue, which is not the expected eraser behaviour.
+    function getStrokeContext() {
+        return scratchCtx !== null ? scratchCtx : CanvasManager.getColoringContext();
+    }
+
     function handlePointerDown(event) {
         if (!isStrokeTool()) return;
         // Skip brush strokes during spacebar pan (ADR-009)
@@ -288,34 +309,39 @@ const BrushEngine = (() => {
         const scaledSize = getScaledBrushSize();
         const preset = getEffectivePreset();
 
+        // Create per-stroke scratch canvas for opacity compositing (ADR-027).
+        // Not used for the eraser — eraser always draws at full opacity.
+        if (Toolbar.getActiveTool() === 'brush') {
+            const activeCanvas = CanvasManager.getColoringCanvas();
+            const scaleFactor = CanvasManager.getScaleFactor();
+            scratchCanvas = document.createElement('canvas');
+            scratchCanvas.width = activeCanvas.width;
+            scratchCanvas.height = activeCanvas.height;
+            scratchCanvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:7;';
+            scratchCanvas.style.width = (activeCanvas.width / scaleFactor) + 'px';
+            scratchCanvas.style.height = (activeCanvas.height / scaleFactor) + 'px';
+            scratchCanvas.style.opacity = String(brushOpacity);
+            activeCanvas.parentElement.appendChild(scratchCanvas);
+            scratchCtx = scratchCanvas.getContext('2d');
+            scratchCtx.scale(scaleFactor, scaleFactor);
+        }
+
         if (preset.spacing === 0) {
-            // Original marker dot at starting point for single taps
-            CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+            // Original marker dot at starting point for single taps.
+            // restoreOutlinePixels deferred to handlePointerUp (ADR-027).
+            CanvasManager.withNativeTransform(getStrokeContext(), (ctx) => {
                 ctx.fillStyle = getStrokeColor();
                 ctx.beginPath();
                 ctx.arc(coords.x, coords.y, scaledSize / 2, 0, Math.PI * 2);
                 ctx.fill();
-
-                // Restore outline pixels that the dot may have covered (ADR-008)
-                const halfBrush = scaledSize / 2 + 2;
-                restoreOutlinePixels(ctx,
-                    coords.x - halfBrush, coords.y - halfBrush,
-                    scaledSize + 4, scaledSize + 4
-                );
             });
         } else {
-            // Place first stamp at tap point (ADR-020)
+            // Place first stamp at tap point (ADR-020).
+            // restoreOutlinePixels deferred to handlePointerUp (ADR-027).
             stampDistanceAccumulated = 0;
             const pressure = event.pressure || 0.5;
-            CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+            CanvasManager.withNativeTransform(getStrokeContext(), (ctx) => {
                 preset.renderStamp(ctx, coords.x, coords.y, scaledSize, getStrokeColor(), pressure);
-
-                const extraPad = preset.extraPadding * scaledSize;
-                const padding = scaledSize / 2 + extraPad + 2;
-                restoreOutlinePixels(ctx,
-                    coords.x - padding, coords.y - padding,
-                    padding * 2, padding * 2
-                );
             });
         }
     }
@@ -342,9 +368,11 @@ const BrushEngine = (() => {
     }
 
     // Original marker rendering path — lineTo() with round caps.
-    // Kept identical to pre-ADR-020 code for backward compatibility.
+    // Draws onto getStrokeContext() (scratch canvas for brush tool) so the full stroke
+    // can be composited at brushOpacity on pointerup without within-stroke compounding.
+    // restoreOutlinePixels is deferred to handlePointerUp (ADR-027).
     function renderMarkerSegment(event, scaledSize) {
-        CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+        CanvasManager.withNativeTransform(getStrokeContext(), (ctx) => {
             ctx.strokeStyle = getStrokeColor();
             ctx.lineWidth = scaledSize;
             ctx.lineCap = 'round';
@@ -355,24 +383,12 @@ const BrushEngine = (() => {
                 ? event.getCoalescedEvents()
                 : [event];
 
-            // Track bounding box across all coalesced segments
-            // for a single outline-pixel restoration pass (ADR-008)
-            let minX = lastX;
-            let minY = lastY;
-            let maxX = lastX;
-            let maxY = lastY;
-
             for (const coalescedEvent of coalescedEvents) {
                 const coords = CanvasManager.getCanvasPixelCoords(coalescedEvent);
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
                 ctx.lineTo(coords.x, coords.y);
                 ctx.stroke();
-
-                minX = Math.min(minX, coords.x);
-                minY = Math.min(minY, coords.y);
-                maxX = Math.max(maxX, coords.x);
-                maxY = Math.max(maxY, coords.y);
 
                 // Expand stroke bbox for region-aware undo (ADR-017)
                 strokeMinX = Math.min(strokeMinX, coords.x);
@@ -383,21 +399,14 @@ const BrushEngine = (() => {
                 lastX = coords.x;
                 lastY = coords.y;
             }
-
-            // Restore outline pixels in the affected bounding box (ADR-008)
-            const halfBrush = scaledSize / 2 + 2;
-            restoreOutlinePixels(ctx,
-                minX - halfBrush, minY - halfBrush,
-                (maxX - minX) + scaledSize + 4,
-                (maxY - minY) + scaledSize + 4
-            );
         });
     }
 
     // Stamp-based rendering for non-marker presets (ADR-020).
-    // Places stamps at even intervals (preset.spacing × brushSize)
-    // along the stroke path. This prevents gaps in fast strokes
-    // and overdraw in slow strokes.
+    // Places stamps at even intervals (preset.spacing × brushSize) along the stroke path.
+    // Draws onto getStrokeContext() (scratch canvas for brush tool) so the full stroke
+    // can be composited at brushOpacity on pointerup without within-stroke compounding.
+    // restoreOutlinePixels is deferred to handlePointerUp (ADR-027).
     function renderStampedSegment(event, scaledSize, preset) {
         const coalescedEvents = event.getCoalescedEvents
             ? event.getCoalescedEvents()
@@ -406,14 +415,7 @@ const BrushEngine = (() => {
         const color = getStrokeColor();
         const stampSpacing = preset.spacing * scaledSize;
 
-        // Track local bbox for outline restoration (ADR-008)
-        let minX = lastX;
-        let minY = lastY;
-        let maxX = lastX;
-        let maxY = lastY;
-        let hasStamps = false;
-
-        CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+        CanvasManager.withNativeTransform(getStrokeContext(), (ctx) => {
             for (const coalescedEvent of coalescedEvents) {
                 const coords = CanvasManager.getCanvasPixelCoords(coalescedEvent);
                 const pressure = coalescedEvent.pressure || 0.5;
@@ -438,15 +440,8 @@ const BrushEngine = (() => {
                             const stampY = lastY + dy * t;
 
                             preset.renderStamp(ctx, stampX, stampY, scaledSize, color, pressure);
-                            hasStamps = true;
 
-                            // Expand local bbox for outline restoration
-                            minX = Math.min(minX, stampX);
-                            minY = Math.min(minY, stampY);
-                            maxX = Math.max(maxX, stampX);
-                            maxY = Math.max(maxY, stampY);
-
-                            // Expand stroke bbox for undo (ADR-017)
+                            // Expand stroke bbox for region-aware undo (ADR-017)
                             strokeMinX = Math.min(strokeMinX, stampX);
                             strokeMinY = Math.min(strokeMinY, stampY);
                             strokeMaxX = Math.max(strokeMaxX, stampX);
@@ -461,17 +456,6 @@ const BrushEngine = (() => {
 
                 lastX = coords.x;
                 lastY = coords.y;
-            }
-
-            // Restore outline pixels in the affected bounding box (ADR-008)
-            if (hasStamps) {
-                const extraPad = preset.extraPadding * scaledSize;
-                const halfBrush = scaledSize / 2 + extraPad + 2;
-                restoreOutlinePixels(ctx,
-                    minX - halfBrush, minY - halfBrush,
-                    (maxX - minX) + (scaledSize + extraPad * 2) + 4,
-                    (maxY - minY) + (scaledSize + extraPad * 2) + 4
-                );
             }
         });
     }
@@ -568,20 +552,49 @@ const BrushEngine = (() => {
         });
     }
 
-    // Ends the stroke, computes the final bounding box padded by
-    // brush radius + preset extra padding + 2px safety margin, and
-    // finalizes the region command so undo stores only the affected
-    // area. (ADR-017, ADR-020)
+    // Ends the stroke, composites the scratch canvas onto the active layer at
+    // brushOpacity, runs outline restoration once over the full stroke bbox,
+    // then finalizes the region-aware undo command. (ADR-017, ADR-020, ADR-027)
     function handlePointerUp(event) {
         if (!isDrawing) return;
         event.target.releasePointerCapture?.(event.pointerId);
         isDrawing = false;
 
-        // Finalize region-aware undo with the stroke bounding box (ADR-017)
         const scaledSize = getScaledBrushSize();
         const preset = getEffectivePreset();
         const extraPadding = preset.extraPadding * scaledSize;
         const padding = scaledSize / 2 + extraPadding + 2;
+
+        // Composite scratch canvas and restore outline pixels for the full stroke bbox. (ADR-027, ADR-008)
+        if (scratchCanvas !== null) {
+            // Brush tool: composite scratch canvas at brushOpacity, then restore outline pixels.
+            CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+                ctx.globalAlpha = brushOpacity;
+                ctx.drawImage(scratchCanvas, 0, 0);
+                ctx.globalAlpha = 1.0;
+                restoreOutlinePixels(ctx,
+                    strokeMinX - padding, strokeMinY - padding,
+                    (strokeMaxX - strokeMinX) + padding * 2,
+                    (strokeMaxY - strokeMinY) + padding * 2
+                );
+            });
+            scratchCanvas.parentElement.removeChild(scratchCanvas);
+            scratchCanvas = null;
+            scratchCtx = null;
+        } else {
+            // Eraser tool: draws directly to the active layer at full opacity. Restoration is
+            // called explicitly rather than relying on ERASER_COLOR being white — correct by
+            // construction if eraser behaviour ever changes. (ADR-008)
+            CanvasManager.withNativeTransform(CanvasManager.getColoringContext(), (ctx) => {
+                restoreOutlinePixels(ctx,
+                    strokeMinX - padding, strokeMinY - padding,
+                    (strokeMaxX - strokeMinX) + padding * 2,
+                    (strokeMaxY - strokeMinY) + padding * 2
+                );
+            });
+        }
+
+        // Finalize region-aware undo with the stroke bounding box (ADR-017)
         const bbox = {
             x: strokeMinX - padding,
             y: strokeMinY - padding,
@@ -609,6 +622,14 @@ const BrushEngine = (() => {
         return brushSize;
     }
 
+    function setBrushOpacity(opacity) {
+        brushOpacity = Math.max(0.05, Math.min(1, opacity));
+    }
+
+    function getBrushOpacity() {
+        return brushOpacity;
+    }
+
     function setActivePreset(name) {
         if (BRUSH_PRESETS[name]) {
             activePreset = name;
@@ -623,6 +644,8 @@ const BrushEngine = (() => {
         initialize,
         setBrushSize,
         getBrushSize,
+        setBrushOpacity,
+        getBrushOpacity,
         setActivePreset,
         getActivePreset
     };

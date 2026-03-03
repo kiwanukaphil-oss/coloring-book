@@ -55,7 +55,8 @@ test.describe('ProgressManager', () => {
     expect(project).not.toBeNull();
     expect(project.status).toBe('in-progress');
     expect(project.templateSrc).toContain('cat.svg');
-    expect(project.coloringBlob).toBeTruthy();
+    // Phase 3: single layer project has coloringBlobs[0] (was coloringBlob in Phase 2)
+    expect(project.coloringBlobs[0]).toBeTruthy();
     expect(project.thumbnailBlob).toBeTruthy();
   });
 

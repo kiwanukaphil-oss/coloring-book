@@ -36,6 +36,11 @@ const UndoManager = (() => {
     // the standard full-canvas finalization.
     let isRegionPending = false;
 
+    // The LayerManager layer index at the time the pending snapshot was captured.
+    // Stored so the command targets the correct layer even if the user switches
+    // layers between saveSnapshot() and the next finalization. (ADR-024)
+    let pendingLayerIndex = 0;
+
     // Captures the current canvas state as the "before" for the
     // next undoable action. When called again, finalizes the
     // previous capture by creating a command with the before state
@@ -57,12 +62,14 @@ const UndoManager = (() => {
             const command = CommandManager.createCanvasCommand(
                 'snapshot',
                 pendingBeforeState,
-                afterImageData
+                afterImageData,
+                pendingLayerIndex
             );
             CommandManager.pushCommand(command);
         }
 
-        // Capture the current state as the new "before"
+        // Capture the current active layer index and state as the new "before"
+        pendingLayerIndex = LayerManager.getActiveLayerIndex();
         pendingBeforeState = CanvasManager.withNativeTransform(ctx, (c) => {
             return c.getImageData(0, 0, canvas.width, canvas.height);
         });
@@ -80,7 +87,8 @@ const UndoManager = (() => {
         // A new action always invalidates redo history
         CommandManager.clearRedoStack();
 
-        // Capture the current state as the new "before"
+        // Capture the current active layer index and state as the new "before"
+        pendingLayerIndex = LayerManager.getActiveLayerIndex();
         pendingBeforeState = CanvasManager.withNativeTransform(ctx, (c) => {
             return c.getImageData(0, 0, canvas.width, canvas.height);
         });
@@ -128,7 +136,8 @@ const UndoManager = (() => {
             'region-snapshot',
             clampedBbox,
             beforeRegion,
-            afterRegion
+            afterRegion,
+            pendingLayerIndex
         );
         CommandManager.pushCommand(command);
 
@@ -196,15 +205,18 @@ const UndoManager = (() => {
         const command = CommandManager.createCanvasCommand(
             'snapshot',
             pendingBeforeState,
-            afterImageData
+            afterImageData,
+            pendingLayerIndex
         );
         CommandManager.pushCommand(command);
         pendingBeforeState = null;
+        pendingLayerIndex = 0;
     }
 
     function clearHistory() {
         pendingBeforeState = null;
         isRegionPending = false;
+        pendingLayerIndex = 0;
         CommandManager.clearCommands();
     }
 

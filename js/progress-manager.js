@@ -87,46 +87,52 @@ const ProgressManager = (() => {
         });
     }
 
-    // Serializes the current drawing state (canvas pixels, tool
-    // settings, template source) into a project record and writes
-    // it to IndexedDB. Generates a 200×200 composite thumbnail
-    // for the saved artwork gallery. Guards against concurrent
-    // saves with the isSaving flag.
+    // Serializes all coloring layers (canvas pixels, metadata), tool settings,
+    // and template source into a project record and writes it to IndexedDB.
+    // Generates a 200×200 composite thumbnail for the saved artwork gallery.
+    // Guards against concurrent saves with the isSaving flag. (ADR-024)
     function saveCurrentProject() {
         if (!currentProjectId || !currentTemplateSrc || isSaving) return;
         if (!StorageManager.isAvailable()) return;
 
         isSaving = true;
 
-        const coloringCanvas = CanvasManager.getColoringCanvas();
+        const layers = LayerManager.getLayers();
+        const layerBlobPromises = layers.map((layer) => canvasToBlob(layer.canvas));
 
-        Promise.all([
-            canvasToBlob(coloringCanvas),
-            generateThumbnailBlob()
-        ]).then(([coloringBlob, thumbnailBlob]) => {
-            const project = {
-                id: currentProjectId,
-                templateSrc: currentTemplateSrc,
-                canvasWidth: coloringCanvas.width,
-                canvasHeight: coloringCanvas.height,
-                coloringBlob: coloringBlob,
-                thumbnailBlob: thumbnailBlob,
-                activeTool: Toolbar.getActiveTool(),
-                brushSize: BrushEngine.getBrushSize(),
-                activePreset: BrushEngine.getActivePreset(),
-                activeColor: ColorPalette.getCurrentColor(),
-                status: 'in-progress',
-                createdAt: parseInt(currentProjectId.split('-')[1], 10),
-                updatedAt: Date.now()
-            };
+        Promise.all([...layerBlobPromises, generateThumbnailBlob()])
+            .then((results) => {
+                const thumbnailBlob = results.pop();
+                const coloringBlobs = results;
 
-            return StorageManager.saveProject(project);
-        }).then(() => {
-            isSaving = false;
-        }).catch((error) => {
-            console.warn('Auto-save failed:', error);
-            isSaving = false;
-        });
+                const project = {
+                    id: currentProjectId,
+                    templateSrc: currentTemplateSrc,
+                    canvasWidth: layers[0].canvas.width,
+                    canvasHeight: layers[0].canvas.height,
+                    coloringBlobs: coloringBlobs,
+                    layerMetadata: layers.map((l) => ({
+                        name: l.name,
+                        visible: l.visible,
+                        opacity: l.opacity
+                    })),
+                    thumbnailBlob: thumbnailBlob,
+                    activeTool: Toolbar.getActiveTool(),
+                    brushSize: BrushEngine.getBrushSize(),
+                    activePreset: BrushEngine.getActivePreset(),
+                    activeColor: ColorPalette.getCurrentColor(),
+                    status: 'in-progress',
+                    createdAt: parseInt(currentProjectId.split('-')[1], 10),
+                    updatedAt: Date.now()
+                };
+
+                return StorageManager.saveProject(project);
+            }).then(() => {
+                isSaving = false;
+            }).catch((error) => {
+                console.warn('Auto-save failed:', error);
+                isSaving = false;
+            });
     }
 
     function canvasToBlob(canvas) {
@@ -184,21 +190,53 @@ const ProgressManager = (() => {
         return StorageManager.getInProgressProject();
     }
 
-    // Restores canvas layers and tool settings from a saved
-    // project. Loads the outline template first (which clears
-    // and prepares all canvases), then overwrites the coloring
-    // canvas with the saved pixel data.
+    // Restores all coloring layers and tool settings from a saved project.
+    // Loads the outline template first (which clears and prepares all canvases),
+    // then restores each coloring layer from its blob in sequence.
+    // Backward-compat: v1 projects have a single coloringBlob; handled via fallback. (ADR-024)
     function resumeProject(project) {
         currentProjectId = project.id;
         currentTemplateSrc = project.templateSrc;
 
         FeedbackManager.showLoadingSpinner();
 
+        // Support v1 projects (single coloringBlob) and v2 projects (coloringBlobs[])
+        const coloringBlobs = project.coloringBlobs || [project.coloringBlob];
+        const layerMetas = project.layerMetadata ||
+            [{ name: 'Layer 1', visible: true, opacity: 1 }];
+
         return CanvasManager.loadOutlineImage(project.templateSrc)
             .then(() => {
-                return restoreColoringFromBlob(project.coloringBlob);
+                // Ensure LayerManager has enough layers for the saved project
+                while (LayerManager.getLayerCount() < coloringBlobs.length) {
+                    LayerManager.addLayer();
+                }
+
+                // Restore each layer sequentially. restoreColoringFromBlob()
+                // calls CanvasManager.getColoringCanvas/Context(), which proxies
+                // to the active layer — so switching the active layer before each
+                // call targets the correct canvas. (ADR-024)
+                let chain = Promise.resolve();
+                coloringBlobs.forEach((blob, i) => {
+                    chain = chain.then(() => {
+                        LayerManager.setActiveLayer(i);
+                        return restoreColoringFromBlob(blob);
+                    });
+                });
+                return chain;
             })
             .then(() => {
+                // Restore layer metadata (visibility, opacity)
+                layerMetas.forEach((meta, i) => {
+                    if (i < LayerManager.getLayerCount()) {
+                        LayerManager.setLayerVisibility(i, meta.visible !== false);
+                        LayerManager.setLayerOpacity(
+                            i, meta.opacity !== undefined ? meta.opacity : 1
+                        );
+                    }
+                });
+                LayerManager.setActiveLayer(0);
+
                 // Restore tool settings
                 Toolbar.setActiveTool(project.activeTool || 'fill');
                 Toolbar.setBrushSize(project.brushSize || 12);

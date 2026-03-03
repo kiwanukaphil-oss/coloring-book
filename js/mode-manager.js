@@ -19,6 +19,9 @@
  * Notes: Persists to localStorage. Default is kids mode, right hand, light theme.
  *   The classic toolbar (#toolbar) and color palette (#color-palette) are hidden
  *   via CSS in both Kids and Studio modes but remain in the DOM for test compatibility.
+ *   Switching to Kids mode forces the active layer to layer 0 (ADR-024, ADR-026).
+ *
+ * Dependencies: EventBus, LayerManager
  */
 
 const ModeManager = (() => {
@@ -47,6 +50,11 @@ const ModeManager = (() => {
         applyMode(currentMode);
         applyHand(currentHand);
         applyTheme(currentTheme);
+
+        // Enforce Kids mode layer constraint on startup (ADR-024)
+        if (currentMode === 'kids') {
+            LayerManager.setActiveLayer(0);
+        }
 
         setupModeToggle();
         setupHandToggle();
@@ -78,6 +86,11 @@ const ModeManager = (() => {
         currentMode = mode;
         applyMode(mode);
         localStorage.setItem(STORAGE_KEY_MODE, mode);
+        // Kids mode draws on layer 0 only; ensure the active layer is reset
+        // so any Studio layer selection doesn't carry over. (ADR-024)
+        if (mode === 'kids') {
+            LayerManager.setActiveLayer(0);
+        }
         EventBus.emit('mode:changed', { mode });
         updateModeToggleUI(mode);
     }

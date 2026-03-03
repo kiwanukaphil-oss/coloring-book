@@ -77,9 +77,10 @@ test.describe('Toolbar', () => {
     expect(visible).toBe(true);
   });
 
-  test('confirming clear saves snapshot and clears canvas', async ({ page }) => {
-    // Draw something first so there's a visible change
+  test('confirming clear wipes undo history and clears all layers', async ({ page }) => {
+    // Draw something on the active layer so there's a visible change + undo step
     await page.evaluate(() => {
+      UndoManager.saveSnapshot();
       const ctx = CanvasManager.getColoringContext();
       CanvasManager.withNativeTransform(ctx, (c) => {
         c.fillStyle = '#FF0000';
@@ -90,13 +91,23 @@ test.describe('Toolbar', () => {
     await page.click('#tool-clear');
     await page.click('#clear-confirm-yes');
 
+    // Clear is a non-undoable fresh start (ADR-024, ADR-026):
+    // undo history is wiped, modal is dismissed
     const result = await page.evaluate(() => ({
       hasUndoSteps: UndoManager.hasUndoSteps(),
       modalHidden: document.getElementById('clear-confirm-modal').classList.contains('hidden'),
     }));
 
-    expect(result.hasUndoSteps).toBe(true);
+    expect(result.hasUndoSteps).toBe(false);
     expect(result.modalHidden).toBe(true);
+
+    // Verify layer-0 was actually cleared back to white (not left with the red rect)
+    const isLayer0White = await page.evaluate(() => {
+      const canvas = LayerManager.getActiveLayerCanvas();
+      const pixel = canvas.getContext('2d').getImageData(0, 0, 1, 1).data;
+      return pixel[0] === 255 && pixel[1] === 255 && pixel[2] === 255;
+    });
+    expect(isLayer0White).toBe(true);
   });
 
   test('cancelling clear dismisses modal without clearing', async ({ page }) => {

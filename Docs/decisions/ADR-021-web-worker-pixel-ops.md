@@ -13,11 +13,20 @@ Move the pixel-intensive algorithms to Web Workers. The main-thread code dispatc
 
 ### Worker architecture
 
+#### `workers/fill-algorithm.js`
+The single source of truth for the scanline fill algorithm. Contains `scanlineFill()`,
+`matchesTargetColor()`, `isOutlinePixel()`, and the three threshold constants. Pure functions
+only — no DOM, no `self`, no module globals.
+
+Loaded by `flood-fill.js` via `<script>` (browser) and by `fill-worker.js` via `importScripts()`
+(worker context), giving both execution paths identical code from one file.
+
 #### `workers/fill-worker.js`
-Receives: coloring pixel data, outline pixel data, canvas dimensions, start point, target color, fill color, tolerance, thresholds.
+Receives: coloring pixel data, outline pixel data, canvas dimensions, start point, target color, fill color channels.
 Returns: modified coloring pixel data, filled pixel count, bounding box of filled region.
 
-The fill algorithm is self-contained — a copy of `scanlineFill()` and its helpers (`matchesTargetColor`, `isOutlinePixel`, `hexToRgba`) within the worker file. The worker has no imports or dependencies.
+Loads `fill-algorithm.js` via `importScripts('./fill-algorithm.js')`. Contains only the message
+handler and ready signal — no algorithm code.
 
 #### `workers/mask-worker.js`
 Receives: outline canvas pixel data, canvas width, canvas height, luminance threshold, alpha threshold.
@@ -58,7 +67,8 @@ Worker creation happens once on module init. If `new Worker()` throws (some WebV
 For fills that take >100ms, a brief loading indicator is shown via `FeedbackManager.showSpinner()`. The spinner is hidden on worker response.
 
 ### Rules
-- Worker files are self-contained: no imports, no references to DOM or module globals
+- Worker files have no DOM or module globals; they may use `importScripts` to load shared algorithm files from the `workers/` directory
+- Algorithm files in `workers/` must be pure functions: no DOM, no `self`, no side effects
 - ArrayBuffers are transferred (not copied) for zero-copy performance
 - The main-thread fallback must produce identical results to the worker
 - Workers are created once on init, not per-operation
@@ -66,10 +76,12 @@ For fills that take >100ms, a brief loading indicator is shown via `FeedbackMana
 - Worker files are added to `ASSETS_TO_CACHE` in the service worker
 
 ## Consequences
-- New: `workers/fill-worker.js` (~120 LOC)
-- New: `workers/mask-worker.js` (~80 LOC)
-- Modified: `js/flood-fill.js` (worker dispatch, async fill path, fallback)
+- New: `workers/fill-algorithm.js` (~120 LOC) — shared fill algorithm, single source of truth
+- New: `workers/fill-worker.js` (~55 LOC) — message handler only, delegates to fill-algorithm.js
+- New: `workers/mask-worker.js` (~50 LOC) — self-contained (no shared algorithm needed)
+- Modified: `js/flood-fill.js` (worker dispatch, async fill path, fallback; algorithm removed)
 - Modified: `js/canvas-manager.js` (worker dispatch for `computeOutlineMask()`, fallback)
-- Modified: `service-worker.js` (add worker files to cache)
+- Modified: `index.html` (load `workers/fill-algorithm.js` before `flood-fill.js`)
+- Modified: `service-worker.js` (add all worker files to cache)
 - Flood fill becomes asynchronous when using workers (main-thread fallback remains synchronous)
 - Frame drops eliminated on mid-range tablets for large fills

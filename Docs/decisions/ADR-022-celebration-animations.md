@@ -10,12 +10,18 @@ The mockup reimagined UI includes confetti/star-burst celebrations for Kids mode
 A new `CelebrationManager` module handles celebration animations using CSS-only particles (not canvas) to avoid interfering with the drawing surface.
 
 ### Trigger events
-| Event | Celebration | Mode |
-|-------|------------|------|
-| First fill on a region | Confetti burst at tap point | Kids only |
-| Saving artwork | Confetti from top | Kids only |
-| Completing a coloring page | Extended confetti | Kids only |
-| Any of the above | Subtle toast | Studio only |
+| Event | Celebration | Mode | Status |
+|-------|------------|------|--------|
+| First fill on a region (`fill:complete`) | Confetti burst at tap point | Kids only | Implemented |
+| Saving artwork (`save:complete`) | Confetti from top | Kids only | Implemented |
+| Completing a coloring page | Extended confetti | Kids only | **Deferred to Phase 3** |
+| Any of the above | Subtle toast | Studio only | **Deferred to Phase 3** |
+
+> **Note (Phase 2):** The "completing a coloring page" trigger requires a reliable signal for
+> when all regions are filled, which depends on the region-tracking logic planned for Phase 3
+> (layer system). The Studio toast trigger is also deferred as Studio mode celebrations were
+> deprioritised in favour of the radial menu (ADR-023). Both will be revisited when the layer
+> system provides fill-coverage data.
 
 ### Implementation
 Confetti particles are `div` elements appended to a `#celebration-container` overlay (`pointer-events: none`, `z-index: 100`). Each particle receives a random color, position, and animation delay. After the animation completes (~2 seconds), all particles are removed.

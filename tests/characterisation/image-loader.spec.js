@@ -76,10 +76,11 @@ test.describe('ImageLoader', () => {
     const referenceFile = path.resolve(__dirname, '../../images/coloring-pages/cat.svg');
     await page.setInputFiles('#reference-upload-input', referenceFile);
 
-    const visible = await page.evaluate(() =>
+    // FileReader.readAsDataURL is async — wait for the panel to appear rather
+    // than checking immediately after setInputFiles (which races the onload callback).
+    await page.waitForFunction(() =>
       !document.getElementById('reference-panel').classList.contains('hidden')
     );
-    expect(visible).toBe(true);
   });
 
   test('closing reference panel hides it', async ({ page }) => {

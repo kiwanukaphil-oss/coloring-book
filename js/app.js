@@ -14,9 +14,9 @@
  *   - checkForResumableProject: Opens IndexedDB, checks for in-progress work
  *   - showResumeModal: Shows thumbnail of previous work with Keep Going / Start Fresh
  *
- * Dependencies: TouchGuard, FeedbackManager, CanvasManager, ColorPalette, FloodFill,
- *   BrushEngine, ImageLoader, Toolbar, CelebrationManager, RadialMenu, StorageManager,
- *   ProgressManager (all modules)
+ * Dependencies: TouchGuard, FeedbackManager, LayerManager (via CanvasManager), CanvasManager,
+ *   ColorPalette, FloodFill, BrushEngine, ImageLoader, Toolbar, CelebrationManager,
+ *   RadialMenu, LayerPanel, StorageManager, ProgressManager (all modules)
  *
  * Notes: Module initialization order matters — CanvasManager must come before any
  *   module that reads canvas elements, and Toolbar must come last because it wires
@@ -43,10 +43,11 @@
     // 11. Mode manager wires kid/studio delegation (needs Toolbar initialized)
     // 12. Celebration manager (needs EventBus + ModeManager, ADR-022)
     // 13. Radial menu (needs Toolbar, ADR-023)
-    // 14. Progress manager (registers visibilitychange listener)
+    // 14. Layer panel (needs LayerManager + ModeManager, ADR-025)
+    // 15. Progress manager (registers visibilitychange listener)
     TouchGuard.initialize();
     FeedbackManager.initialize();
-    CanvasManager.initialize();
+    CanvasManager.initialize();  // also calls LayerManager.initialize() (ADR-024)
     ViewportManager.initialize();
     ColorPalette.initialize();
     ColorPicker.initialize();
@@ -57,6 +58,7 @@
     ModeManager.initialize();
     CelebrationManager.initialize();
     RadialMenu.initialize();
+    LayerPanel.initialize();
     ProgressManager.initialize();
 
     registerServiceWorker();

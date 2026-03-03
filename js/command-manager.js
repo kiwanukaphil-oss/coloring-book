@@ -14,8 +14,9 @@
  *   - getUndoDepth / getRedoDepth: Returns stack sizes for UI indicators
  *   - createCanvasCommand: Factory for full-canvas ImageData commands
  *   - createRegionCommand: Factory for bounding-box ImageData commands (ADR-017)
+ *   - createLayerDeleteCommand: Factory for undoable layer-delete commands (ADR-026)
  *
- * Dependencies: CanvasManager (for canvas/context access and withNativeTransform)
+ * Dependencies: CanvasManager (for withNativeTransform), LayerManager (for getLayerAt)
  *
  * Notes: Commands come in two forms: full-canvas (for clear, image load) and
  *   region-specific (for brush strokes, flood fills). Region commands store
@@ -32,14 +33,15 @@ const CommandManager = (() => {
     let undoStack = [];
     let redoStack = [];
 
-    // Creates a command object that stores full-canvas ImageData
-    // for both before and after states. undo() restores the before
-    // state; redo() restores the after state. Both use synchronous
-    // putImageData via withNativeTransform (ADR-007).
-    function createCanvasCommand(type, beforeImageData, afterImageData) {
+    // Creates a command object that stores full-canvas ImageData for both before
+    // and after states. layerIndex identifies which layer's context to restore to,
+    // so undo/redo target the correct layer even if the active layer has changed
+    // since the command was created. (ADR-024)
+    function createCanvasCommand(type, beforeImageData, afterImageData, layerIndex = 0) {
         return {
             type: type,
             timestamp: Date.now(),
+            layerIndex: layerIndex,
             boundingBox: {
                 x: 0,
                 y: 0,
@@ -49,28 +51,30 @@ const CommandManager = (() => {
             beforeImageData: beforeImageData,
             afterImageData: afterImageData,
             undo() {
-                const ctx = CanvasManager.getColoringContext();
-                CanvasManager.withNativeTransform(ctx, (c) => {
+                const layer = LayerManager.getLayerAt(this.layerIndex);
+                if (!layer) return;
+                CanvasManager.withNativeTransform(layer.ctx, (c) => {
                     c.putImageData(this.beforeImageData, 0, 0);
                 });
             },
             redo() {
-                const ctx = CanvasManager.getColoringContext();
-                CanvasManager.withNativeTransform(ctx, (c) => {
+                const layer = LayerManager.getLayerAt(this.layerIndex);
+                if (!layer) return;
+                CanvasManager.withNativeTransform(layer.ctx, (c) => {
                     c.putImageData(this.afterImageData, 0, 0);
                 });
             }
         };
     }
 
-    // Creates a command object that stores ImageData for only the
-    // affected bounding-box region. undo() restores the before region;
-    // redo() restores the after region. Both use putImageData with
-    // the bbox offset for partial canvas restore. (ADR-017)
-    function createRegionCommand(type, bbox, beforeImageData, afterImageData) {
+    // Creates a command object that stores ImageData for only the affected
+    // bounding-box region. layerIndex ensures undo/redo restore to the layer
+    // the action was performed on, regardless of the current active layer. (ADR-017, ADR-024)
+    function createRegionCommand(type, bbox, beforeImageData, afterImageData, layerIndex = 0) {
         return {
             type: type,
             timestamp: Date.now(),
+            layerIndex: layerIndex,
             boundingBox: {
                 x: bbox.x,
                 y: bbox.y,
@@ -80,16 +84,44 @@ const CommandManager = (() => {
             beforeImageData: beforeImageData,
             afterImageData: afterImageData,
             undo() {
-                const ctx = CanvasManager.getColoringContext();
-                CanvasManager.withNativeTransform(ctx, (c) => {
+                const layer = LayerManager.getLayerAt(this.layerIndex);
+                if (!layer) return;
+                CanvasManager.withNativeTransform(layer.ctx, (c) => {
                     c.putImageData(this.beforeImageData, this.boundingBox.x, this.boundingBox.y);
                 });
             },
             redo() {
-                const ctx = CanvasManager.getColoringContext();
-                CanvasManager.withNativeTransform(ctx, (c) => {
+                const layer = LayerManager.getLayerAt(this.layerIndex);
+                if (!layer) return;
+                CanvasManager.withNativeTransform(layer.ctx, (c) => {
                     c.putImageData(this.afterImageData, this.boundingBox.x, this.boundingBox.y);
                 });
+            }
+        };
+    }
+
+    // Factory for a command that makes deleteLayer undoable. snapshot is the
+    // object from LayerManager.getLayerSnapshot() (offscreen canvas + metadata).
+    // undo() re-inserts the layer at the original index via LayerManager.insertLayer();
+    // redo() deletes it again. The command is self-contained per ADR-011. (ADR-026)
+    //
+    // ADR-011 interface note: this command intentionally omits boundingBox,
+    // beforeImageData, and afterImageData. It stores a canvasData snapshot (an
+    // offscreen HTMLCanvasElement) instead of per-pixel ImageData. undoCommand() and
+    // redoCommand() call undo()/redo() directly and never inspect those fields,
+    // so the structural deviation from the drawing-command interface is safe.
+    function createLayerDeleteCommand(layerIndex, snapshot) {
+        return {
+            type: 'layer-delete',
+            timestamp: Date.now(),
+            layerIndex: layerIndex,
+            snapshot: snapshot,
+            undo() {
+                LayerManager.insertLayer(this.layerIndex, this.snapshot);
+                LayerManager.setActiveLayer(this.layerIndex);
+            },
+            redo() {
+                LayerManager.deleteLayer(this.layerIndex);
             }
         };
     }
@@ -148,6 +180,7 @@ const CommandManager = (() => {
     return {
         createCanvasCommand,
         createRegionCommand,
+        createLayerDeleteCommand,
         pushCommand,
         undoCommand,
         redoCommand,

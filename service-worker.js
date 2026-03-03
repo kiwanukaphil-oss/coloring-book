@@ -20,7 +20,7 @@
  *   requests fall back to index.html for SPA-style routing support.
  */
 
-const CACHE_VERSION = 'coloring-book-v17';
+const CACHE_VERSION = 'coloring-book-v19';
 
 const ASSETS_TO_CACHE = [
     './',
@@ -46,6 +46,8 @@ const ASSETS_TO_CACHE = [
     './js/progress-manager.js',
     './js/celebration-manager.js',
     './js/radial-menu.js',
+    './js/layer-manager.js',
+    './js/layer-panel.js',
     './images/icons/icon-192.svg',
     './images/icons/icon-512.svg',
     './images/coloring-pages/cat.svg',
@@ -57,6 +59,7 @@ const ASSETS_TO_CACHE = [
     './images/coloring-pages/unicorn.svg',
     './images/coloring-pages/car.svg',
     './templates/manifest.json',
+    './workers/fill-algorithm.js',
     './workers/fill-worker.js',
     './workers/mask-worker.js',
 ];
